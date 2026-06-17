@@ -1,0 +1,2366 @@
+#:import dp kivy.metrics.dp
+# Barre haute (bleu Material 900) + texte / icones blancs
+#:set bar_blue 0.051, 0.278, 0.631, 1
+#:set bar_text 1, 1, 1, 1
+# Menu lateral (bleu nuit, assorti)
+#:set drawer_blue 0.04, 0.11, 0.26, 1
+# Boutons texte / contour noir (lisibilite)
+#:set ink_black 0.06, 0.06, 0.08, 1
+
+<ProductCard>:
+    orientation: "vertical"
+    size_hint_y: None
+    size_hint_x: 1
+    height: dp(290)
+    spacing: dp(0)
+    padding: dp(0)
+    md_bg_color: 1, 1, 1, 1
+    radius: [12, 12, 12, 12]
+    elevation: 2
+
+    RelativeLayout:
+        size_hint_y: None
+        height: dp(110)
+        
+        FitImage:
+            source: root.image_url if root.image_url else "https://picsum.photos/seed/defaultproduct/600/420"
+            size_hint: 1, 1
+            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+        
+        MDIconButton:
+            id: fav_btn
+            icon: "heart" if root.is_favorite else "heart-outline"
+            theme_text_color: "Custom"
+            text_color: 0.85, 0.15, 0.2, 1
+            size_hint: None, None
+            size: dp(32), dp(32)
+            pos_hint: {"right": 0.98, "top": 0.98}
+            on_release: app.toggle_favorite(root.product_id)
+
+    MDBoxLayout:
+        orientation: "vertical"
+        spacing: dp(2)
+        padding: dp(10), dp(6), dp(10), dp(6)
+        size_hint_y: 1
+        
+        MDLabel:
+            text: root.title
+            bold: True
+            theme_text_color: "Primary"
+            size_hint_y: None
+            height: dp(22)
+            font_size: "12sp"
+            text_size: self.size
+            halign: "left"
+            valign: "middle"
+            shorten: True
+            shorten_from: "right"
+
+        MDLabel:
+            text: root.subtitle
+            theme_text_color: "Secondary"
+            size_hint_y: None
+            height: dp(14)
+            font_size: "10sp"
+            text_size: self.size
+            halign: "left"
+            shorten: True
+            shorten_from: "right"
+
+        MDLabel:
+            text: root.price
+            bold: True
+            theme_text_color: "Custom"
+            text_color: 0.13, 0.59, 0.95, 1
+            size_hint_y: None
+            height: dp(20)
+            font_size: "14sp"
+
+        Widget:
+            size_hint_y: 1
+
+        MDBoxLayout:
+            orientation: "horizontal"
+            spacing: dp(6)
+            size_hint_y: None
+            height: dp(32)
+            MDRaisedButton:
+                text: "Details"
+                md_bg_color: 0.13, 0.59, 0.95, 1
+                font_size: "11sp"
+                height: dp(32)
+                on_release: app.open_product_details(root.product_id)
+            MDRaisedButton:
+                text: "Panier"
+                md_bg_color: 0.13, 0.61, 0.55, 1
+                font_size: "11sp"
+                height: dp(32)
+                on_release: app.show_add_to_cart_dialog(root.product_id, 1)
+
+        MDSeparator:
+            height: dp(8)
+
+        MDIconButton:
+            icon: "store"
+            theme_text_color: "Custom"
+            text_color: 0.4, 0.4, 0.4, 1
+            size_hint_y: None
+            height: dp(26)
+            disabled: not root.show_shop_link
+            opacity: 1 if root.show_shop_link else 0
+            on_release: app.open_shop(root.shop_id)
+        
+        MDLabel:
+            text: "Voir boutique"
+            theme_text_color: "Custom"
+            text_color: 0.4, 0.4, 0.4, 1
+            font_size: "11sp"
+            size_hint_y: None
+            height: dp(20)
+            disabled: not root.show_shop_link
+            opacity: 1 if root.show_shop_link else 0
+
+<FilterDialogContent@MDBoxLayout>:
+    orientation: "vertical"
+    spacing: dp(8)
+    adaptive_height: True
+    padding: dp(8)
+    size_hint_y: None
+
+    MDTextField:
+        id: f_search
+        hint_text: "Rechercher produit ou boutique"
+        mode: "rectangle"
+    MDTextField:
+        id: f_category
+        hint_text: "Categorie"
+        mode: "rectangle"
+    MDTextField:
+        id: f_qty
+        hint_text: "Quantite par defaut"
+        text: "1"
+        mode: "rectangle"
+
+<ReviewDialogContent@MDBoxLayout>:
+    orientation: "vertical"
+    spacing: dp(12)
+    adaptive_height: True
+    padding: dp(8)
+    size_hint_y: None
+
+    MDLabel:
+        text: "Votre note:"
+        size_hint_y: None
+        height: dp(24)
+    
+    MDSlider:
+        id: review_rating
+        min: 1
+        max: 5
+        value: 5
+        step: 1
+        size_hint_y: None
+        height: dp(40)
+    
+    MDLabel:
+        id: rating_label
+        text: "5 / 5"
+        halign: "center"
+        size_hint_y: None
+        height: dp(20)
+    
+    MDTextField:
+        id: review_comment
+        hint_text: "Votre commentaire (optionnel)"
+        mode: "rectangle"
+        multiline: True
+        size_hint_y: None
+        height: dp(80)
+
+<LoginScreen>:
+    MDScreen:
+        MDBoxLayout:
+            orientation: "vertical"
+            padding: dp(14)
+            spacing: dp(12)
+
+            MDTopAppBar:
+                title: "Connexion"
+                elevation: 2
+                md_bg_color: bar_blue
+                specific_text_color: bar_text
+
+            MDCard:
+                orientation: "vertical"
+                padding: dp(14)
+                spacing: dp(12)
+                radius: [16, 16, 16, 16]
+                elevation: 3
+
+                FitImage:
+                    source: "img/Fichier 3_102810.png"
+                    size_hint: None, None
+                    size: dp(80), dp(80)
+                    pos_hint: {"center_x": 0.5}
+                    radius: [12, 12, 12, 12]
+
+                MDTextField:
+                    id: login_email
+                    hint_text: "Email"
+                    helper_text_mode: "on_focus"
+                    mode: "rectangle"
+
+                MDTextField:
+                    id: login_password
+                    hint_text: "Mot de passe"
+                    password: True
+                    mode: "rectangle"
+
+                MDRaisedButton:
+                    text: "Se connecter"
+                    on_release: root.do_login()
+
+                MDFlatButton:
+                    text: "Creer un compte"
+                    theme_text_color: "Custom"
+                    text_color: ink_black
+                    line_color: ink_black
+                    on_release: app.start_signup()
+
+                MDLabel:
+                    text: root.message
+                    theme_text_color: "Error"
+
+<SignupStep1Screen>:
+    MDScreen:
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: dp(0)
+            padding: dp(0)
+
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: dp(50)
+                md_bg_color: bar_blue
+                padding: dp(0), 0, dp(4), 0
+                MDIconButton:
+                    icon: "arrow-left"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    on_release: setattr(app.root, "current", "login")
+                    size_hint: None, None
+                    size: dp(50), dp(50)
+                MDLabel:
+                    text: "Inscription - Étape 1/4"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    font_style: "H6"
+                    size_hint_x: 1
+                    halign: "left"
+                    valign: "center"
+
+            ScrollView:
+                size_hint_y: 1
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: dp(12)
+                    padding: dp(16)
+                    adaptive_height: True
+                    
+                    MDLabel:
+                        text: "Informations personnelles"
+                        bold: True
+                        font_style: "H5"
+                        theme_text_color: "Primary"
+                        size_hint_y: None
+                        height: dp(36)
+                    
+                    MDTextField:
+                        id: step1_name
+                        hint_text: "Nom complet"
+                        mode: "rectangle"
+                        helper_text: "Ex: Jean Dupont"
+                        helper_text_mode: "persistent"
+                        size_hint_y: None
+                        height: dp(56)
+                    
+                    MDLabel:
+                        text: "Date de naissance"
+                        theme_text_color: "Primary"
+                        size_hint_y: None
+                        height: dp(24)
+                    
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        spacing: dp(8)
+                        size_hint_y: None
+                        height: dp(56)
+
+                        MDTextField:
+                            id: birth_day
+                            hint_text: "JJ"
+                            mode: "rectangle"
+                            input_filter: "int"
+                            max_text_length: 2
+                            size_hint_x: 1
+                            helper_text: "Jour"
+
+                        MDTextField:
+                            id: birth_month
+                            hint_text: "MM"
+                            mode: "rectangle"
+                            input_filter: "int"
+                            max_text_length: 2
+                            size_hint_x: 1
+                            helper_text: "Mois"
+
+                        MDTextField:
+                            id: birth_year
+                            hint_text: "AAAA"
+                            mode: "rectangle"
+                            input_filter: "int"
+                            max_text_length: 4
+                            size_hint_x: 1.5
+                            helper_text: "Année"
+
+                    MDLabel:
+                        text: "Genre"
+                        theme_text_color: "Primary"
+                        size_hint_y: None
+                        height: dp(24)
+                    
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        spacing: dp(24)
+                        size_hint_y: None
+                        height: dp(44)
+                        padding: dp(8)
+                        md_bg_color: 1, 1, 1, 1
+                        radius: [10, 10, 10, 10]
+                        
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            spacing: dp(4)
+                            MDCheckbox:
+                                id: gender_homme
+                                group: "gender"
+                                size_hint: None, None
+                                size: dp(36), dp(36)
+                            MDLabel:
+                                text: "Homme"
+                                theme_text_color: "Primary"
+                                font_size: "14sp"
+                                valign: "center"
+                            
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            spacing: dp(4)
+                            MDCheckbox:
+                                id: gender_femme
+                                group: "gender"
+                                size_hint: None, None
+                                size: dp(36), dp(36)
+                            MDLabel:
+                                text: "Femme"
+                                theme_text_color: "Primary"
+                                font_size: "14sp"
+                                valign: "center"
+                            
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            spacing: dp(4)
+                            MDCheckbox:
+                                id: gender_autre
+                                group: "gender"
+                                size_hint: None, None
+                                size: dp(36), dp(36)
+                            MDLabel:
+                                text: "Autre"
+                                theme_text_color: "Primary"
+                                font_size: "14sp"
+                                valign: "center"
+
+                    MDLabel:
+                        text: root.message
+                        theme_text_color: "Error"
+                        halign: "center"
+                        size_hint_y: None
+                        height: dp(24)
+
+                    MDRaisedButton:
+                        text: "Continuer"
+                        md_bg_color: 0.13, 0.59, 0.95, 1
+                        on_release: root.validate_step1()
+                        size_hint_y: None
+                        height: dp(50)
+                    
+                    Widget:
+                        size_hint_y: None
+                        height: dp(20)
+
+<SignupStep2Screen>:
+    MDScreen:
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: dp(0)
+            padding: dp(0)
+
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: dp(50)
+                md_bg_color: bar_blue
+                padding: dp(0), 0, dp(4), 0
+                MDIconButton:
+                    icon: "arrow-left"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    on_release: root.go_back()
+                    size_hint: None, None
+                    size: dp(50), dp(50)
+                MDLabel:
+                    text: "Inscription - Étape 2/4"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    font_style: "H6"
+                    size_hint_x: 1
+                    halign: "left"
+                    valign: "center"
+
+            ScrollView:
+                size_hint_y: 1
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: dp(12)
+                    padding: dp(16)
+                    adaptive_height: True
+                    
+                    MDLabel:
+                        text: "Coordonnées"
+                        bold: True
+                        font_style: "H5"
+                        theme_text_color: "Primary"
+                        size_hint_y: None
+                        height: dp(36)
+                    
+                    MDTextField:
+                        id: step2_email
+                        hint_text: "Adresse email"
+                        mode: "rectangle"
+                        helper_text: "Ex: jean.dupont@email.com"
+                        helper_text_mode: "persistent"
+                        size_hint_y: None
+                        height: dp(56)
+                    
+                    MDTextField:
+                        id: step2_address
+                        hint_text: "Adresse complète"
+                        mode: "rectangle"
+                        helper_text: "Ex: 123 Avenue de la République, 75001 Paris"
+                        helper_text_mode: "persistent"
+                        multiline: True
+                        size_hint_y: None
+                        height: dp(80)
+                    
+                    MDLabel:
+                        text: root.message
+                        theme_text_color: "Error"
+                        halign: "center"
+                        size_hint_y: None
+                        height: dp(24)
+
+                    MDRaisedButton:
+                        text: "Continuer"
+                        md_bg_color: 0.13, 0.59, 0.95, 1
+                        on_release: root.validate_step2()
+                        size_hint_y: None
+                        height: dp(50)
+                    
+                    Widget:
+                        size_hint_y: None
+                        height: dp(20)
+
+<SignupStep3Screen>:
+    MDScreen:
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: dp(0)
+            padding: dp(0)
+
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: dp(50)
+                md_bg_color: bar_blue
+                padding: dp(0), 0, dp(4), 0
+                MDIconButton:
+                    icon: "arrow-left"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    on_release: root.go_back()
+                    size_hint: None, None
+                    size: dp(50), dp(50)
+                MDLabel:
+                    text: "Inscription - Étape 3/4"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    font_style: "H6"
+                    size_hint_x: 1
+                    halign: "left"
+                    valign: "center"
+
+            ScrollView:
+                size_hint_y: 1
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: dp(12)
+                    padding: dp(16)
+                    adaptive_height: True
+                    
+                    MDLabel:
+                        text: "Sécurité"
+                        bold: True
+                        font_style: "H5"
+                        theme_text_color: "Primary"
+                        size_hint_y: None
+                        height: dp(36)
+                    
+                    MDLabel:
+                        text: "Créez un mot de passe sécurisé"
+                        theme_text_color: "Secondary"
+                        font_size: "13sp"
+                        size_hint_y: None
+                        height: dp(20)
+                    
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        spacing: dp(4)
+                        adaptive_height: True
+                        MDTextField:
+                            id: step3_password
+                            hint_text: "Mot de passe"
+                            mode: "rectangle"
+                            password: True
+                            helper_text: "Minimum 6 caractères"
+                            helper_text_mode: "persistent"
+                            size_hint_x: 1
+                            height: dp(56)
+                        MDIconButton:
+                            icon: "eye-off"
+                            theme_text_color: "Hint"
+                            on_release: root.toggle_password_field("step3_password", self)
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        spacing: dp(4)
+                        adaptive_height: True
+                        MDTextField:
+                            id: step3_confirm_password
+                            hint_text: "Confirmer le mot de passe"
+                            mode: "rectangle"
+                            password: True
+                            helper_text: "Répétez le mot de passe"
+                            helper_text_mode: "persistent"
+                            size_hint_x: 1
+                            height: dp(56)
+                        MDIconButton:
+                            icon: "eye-off"
+                            theme_text_color: "Hint"
+                            on_release: root.toggle_password_field("step3_confirm_password", self)
+
+                    MDLabel:
+                        text: root.message
+                        theme_text_color: "Error"
+                        halign: "center"
+                        size_hint_y: None
+                        height: dp(24)
+
+                    MDRaisedButton:
+                        text: "Continuer"
+                        md_bg_color: 0.13, 0.59, 0.95, 1
+                        on_release: root.validate_step3()
+                        size_hint_y: None
+                        height: dp(50)
+                    
+                    Widget:
+                        size_hint_y: None
+                        height: dp(20)
+
+<SignupStep5Screen>:
+    MDScreen:
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: dp(0)
+            padding: dp(0)
+
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: dp(50)
+                md_bg_color: bar_blue
+                padding: dp(0), 0, dp(4), 0
+                MDIconButton:
+                    icon: "arrow-left"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    on_release: root.go_back()
+                    size_hint: None, None
+                    size: dp(50), dp(50)
+                MDLabel:
+                    text: "Inscription - Étape 4/4"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    font_style: "H6"
+                    size_hint_x: 1
+                    halign: "left"
+                    valign: "center"
+
+            ScrollView:
+                size_hint_y: 1
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: dp(12)
+                    padding: dp(16)
+                    adaptive_height: True
+                    
+                    MDLabel:
+                        text: "Récapitulatif"
+                        bold: True
+                        font_style: "H5"
+                        theme_text_color: "Primary"
+                        size_hint_y: None
+                        height: dp(36)
+                    
+                    MDLabel:
+                        id: recap_text
+                        theme_text_color: "Secondary"
+                        font_size: "14sp"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.size
+                    
+                    MDLabel:
+                        text: root.message
+                        theme_text_color: "Error"
+                        halign: "center"
+                        size_hint_y: None
+                        height: dp(24)
+
+                    MDRaisedButton:
+                        text: "Continuer"
+                        md_bg_color: 0.13, 0.59, 0.95, 1
+                        on_release: root.validate_step5()
+                        size_hint_y: None
+                        height: dp(50)
+                    
+                    Widget:
+                        size_hint_y: None
+                        height: dp(20)
+
+<SignupStep6Screen>:
+    MDScreen:
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: dp(0)
+            padding: dp(0)
+
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: dp(50)
+                md_bg_color: bar_blue
+                padding: dp(0), 0, dp(4), 0
+                MDIconButton:
+                    icon: "arrow-left"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    on_release: root.go_back()
+                    size_hint: None, None
+                    size: dp(50), dp(50)
+                MDLabel:
+                    text: "Inscription"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    font_style: "H6"
+                    size_hint_x: 1
+                    halign: "left"
+                    valign: "center"
+
+            ScrollView:
+                size_hint_y: 1
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: dp(16)
+                    padding: dp(16)
+                    adaptive_height: True
+                    
+                    MDLabel:
+                        text: "Terminer l'inscription"
+                        bold: True
+                        font_style: "H5"
+                        theme_text_color: "Primary"
+                        size_hint_y: None
+                        height: dp(36)
+                    
+                    MDLabel:
+                        text: "Veuillez accepter les conditions"
+                        theme_text_color: "Secondary"
+                        font_size: "13sp"
+                        size_hint_y: None
+                        height: dp(20)
+                    
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        spacing: dp(12)
+                        size_hint_y: None
+                        height: dp(50)
+                        padding: dp(12)
+                        md_bg_color: 1, 1, 1, 1
+                        radius: [12, 12, 12, 12]
+                        elevation: 1
+                        
+                        MDCheckbox:
+                            id: terms_checkbox
+                            size_hint: None, None
+                            size: dp(40), dp(40)
+                            on_active: root.terms_accepted = self.active
+                        MDLabel:
+                            text: "Conditions d'Utilisation"
+                            theme_text_color: "Primary"
+                            font_size: "14sp"
+                            valign: "center"
+                            on_touch_down: root.show_terms_popup()
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        spacing: dp(12)
+                        size_hint_y: None
+                        height: dp(50)
+                        padding: dp(12)
+                        md_bg_color: 1, 1, 1, 1
+                        radius: [12, 12, 12, 12]
+                        elevation: 1
+                        
+                        MDCheckbox:
+                            id: privacy_checkbox
+                            size_hint: None, None
+                            size: dp(40), dp(40)
+                            on_active: root.privacy_accepted = self.active
+                        MDLabel:
+                            text: "Politique de Confidentialité"
+                            theme_text_color: "Primary"
+                            font_size: "14sp"
+                            valign: "center"
+                            on_touch_down: root.show_privacy_popup()
+                    
+                    MDLabel:
+                        text: "Cliquez sur le texte pour lire les conditions"
+                        theme_text_color: "Hint"
+                        font_size: "11sp"
+                        halign: "center"
+                        size_hint_y: None
+                        height: dp(20)
+                    
+                    MDLabel:
+                        text: root.message
+                        theme_text_color: "Error"
+                        halign: "center"
+                        size_hint_y: None
+                        height: dp(24)
+
+                    MDRaisedButton:
+                        text: "Créer mon compte"
+                        md_bg_color: 0.13, 0.59, 0.95, 1
+                        on_release: root.validate_step6()
+                        size_hint_y: None
+                        height: dp(50)
+                    
+                    Widget:
+                        size_hint_y: None
+                        height: dp(20)
+
+<MarketScreen>:
+    MDNavigationLayout:
+        ScreenManager:
+            MDScreen:
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: dp(6)
+                    padding: dp(8)
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(56)
+                        md_bg_color: bar_blue
+                        elevation: 0
+                        padding: dp(2), 0, dp(4), 0
+                        MDIconButton:
+                            icon: "menu"
+                            theme_text_color: "Custom"
+                            text_color: bar_text
+                            on_release: root.toggle_drawer()
+                        MDLabel:
+                            text: "Spaceness"
+                            theme_text_color: "Custom"
+                            text_color: bar_text
+                            font_style: "H6"
+                            bold: True
+                            size_hint_x: 1
+                            halign: "left"
+                            valign: "center"
+                        FloatLayout:
+                            size_hint: None, None
+                            size: dp(48), dp(48)
+                            MDIconButton:
+                                icon: "cart"
+                                theme_text_color: "Custom"
+                                text_color: bar_text
+                                pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                                on_release: app.open_cart()
+                            MDLabel:
+                                text: str(app.cart_badge_count) if app.cart_badge_count else ""
+                                size_hint: None, None
+                                size: dp(18), dp(18)
+                                halign: "center"
+                                valign: "middle"
+                                font_style: "Caption"
+                                theme_text_color: "Custom"
+                                text_color: 1, 1, 1, 1
+                                md_bg_color: 0.85, 0.15, 0.2, 1
+                                radius: [9, 9, 9, 9]
+                                pos_hint: {"right": 0.98, "top": 0.95}
+                                opacity: 1 if app.cart_badge_count else 0
+
+                    MDCard:
+                        size_hint_y: None
+                        height: dp(62)
+                        radius: [14, 14, 14, 14]
+                        md_bg_color: 0.13, 0.61, 0.55, 1
+                        padding: dp(12)
+                        MDBoxLayout:
+                            orientation: "vertical"
+                            MDLabel:
+                                text: "Mega Deals - inspire marketplace"
+                                bold: True
+                                theme_text_color: "Custom"
+                                text_color: 1, 1, 1, 1
+                            MDLabel:
+                                text: "Promos, decouverte boutiques, achats rapides"
+                                theme_text_color: "Custom"
+                                text_color: 0.9, 0.97, 0.96, 1
+
+                    Widget:
+                        size_hint_y: None
+                        height: dp(10)
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        spacing: dp(8)
+                        size_hint_y: None
+                        height: dp(46)
+                        padding: dp(8)
+                        MDTextField:
+                            id: market_search_bar
+                            hint_text: "Rechercher..."
+                            mode: "rectangle"
+                            size_hint_x: 1
+                            on_focus: if self.focus: root.go_to_search()
+                            padding: dp(10), dp(6)
+                        MDIconButton:
+                            icon: "magnify"
+                            theme_text_color: "Primary"
+                            size_hint: None, None
+                            size: dp(46), dp(46)
+                            on_release: root.go_to_search()
+                        MDIconButton:
+                            icon: "refresh"
+                            theme_text_color: "Primary"
+                            size_hint: None, None
+                            size: dp(46), dp(46)
+                            on_release: root.refresh_products()
+
+                    MDLabel:
+                        text: root.message
+                        theme_text_color: "Secondary"
+                        size_hint_y: None
+                        height: dp(18)
+                        font_size: "11sp"
+                        padding: dp(8), dp(0)
+
+                    ScrollView:
+                        do_scroll_x: False
+                        MDGridLayout:
+                            id: market_products
+                            cols: 1
+                            spacing: dp(8)
+                            adaptive_height: True
+                            padding: dp(8), dp(8), dp(8), dp(8)
+                            size_hint_x: 1
+
+        MDNavigationDrawer:
+            id: market_drawer
+            radius: (0, 16, 16, 0)
+            md_bg_color: drawer_blue
+
+            MDBoxLayout:
+                orientation: "vertical"
+                spacing: dp(8)
+                padding: dp(12)
+
+                MDLabel:
+                    text: "Mon compte"
+                    bold: True
+                    theme_text_color: "Custom"
+                    text_color: 0.95, 0.96, 1, 1
+                    adaptive_height: True
+                MDLabel:
+                    text: root.user_header
+                    theme_text_color: "Custom"
+                    text_color: 0.73, 0.78, 0.9, 1
+                    adaptive_height: True
+
+                MDSeparator:
+
+                MDList:
+                    OneLineIconListItem:
+                        text: "Accueil"
+                        theme_text_color: "Custom"
+                        text_color: 0.95, 0.96, 1, 1
+                        on_release: root.nav_to_market()
+                        IconLeftWidget:
+                            icon: "home"
+                            theme_text_color: "Custom"
+                            text_color: 0.75, 0.87, 1, 1
+                    OneLineIconListItem:
+                        text: "Recherche"
+                        theme_text_color: "Custom"
+                        text_color: 0.95, 0.96, 1, 1
+                        on_release:
+                            root.close_drawer()
+                            app.open_search_screen("")
+                        IconLeftWidget:
+                            icon: "magnify"
+                            theme_text_color: "Custom"
+                            text_color: 0.75, 0.87, 1, 1
+                    OneLineIconListItem:
+                        text: "Panier"
+                        theme_text_color: "Custom"
+                        text_color: 0.95, 0.96, 1, 1
+                        on_release: root.nav_to_cart()
+                        IconLeftWidget:
+                            icon: "cart"
+                            theme_text_color: "Custom"
+                            text_color: 0.75, 0.87, 1, 1
+                    OneLineIconListItem:
+                        text: "Mes commandes"
+                        theme_text_color: "Custom"
+                        text_color: 0.95, 0.96, 1, 1
+                        on_release:
+                            root.close_drawer()
+                            app.open_orders()
+                        IconLeftWidget:
+                            icon: "clipboard-list"
+                            theme_text_color: "Custom"
+                            text_color: 0.75, 0.87, 1, 1
+                    OneLineIconListItem:
+                        text: "Mon Compte"
+                        theme_text_color: "Custom"
+                        text_color: 0.95, 0.96, 1, 1
+                        on_release:
+                            root.close_drawer()
+                            app.root.current = "account"
+                        IconLeftWidget:
+                            icon: "account-circle"
+                            theme_text_color: "Custom"
+                            text_color: 0.75, 0.87, 1, 1
+                    OneLineIconListItem:
+                        text: "Contacter Admin" + (" 🔴" if app.admin_notification else "")
+                        theme_text_color: "Custom"
+                        text_color: (1, 0.5, 0.5, 1) if app.admin_notification else (0.95, 0.96, 1, 1)
+                        on_release:
+                            root.close_drawer()
+                            app.check_notifications()
+                            app.root.current = "contact_admin"
+                        IconLeftWidget:
+                            icon: "alert-circle" if app.admin_notification else "message-text-outline"
+                            theme_text_color: "Custom"
+                            text_color: (1, 0.3, 0.3, 1) if app.admin_notification else (0.75, 0.87, 1, 1)
+                    OneLineIconListItem:
+                        text: "Mes Favoris"
+                        theme_text_color: "Custom"
+                        text_color: 0.95, 0.96, 1, 1
+                        on_release:
+                            root.close_drawer()
+                            app.root.current = "favorites"
+                        IconLeftWidget:
+                            icon: "heart"
+                            theme_text_color: "Custom"
+                            text_color: 0.75, 0.87, 1, 1
+                    OneLineIconListItem:
+                        text: "Historique"
+                        theme_text_color: "Custom"
+                        text_color: 0.95, 0.96, 1, 1
+                        on_release:
+                            root.close_drawer()
+                            app.root.current = "history"
+                        IconLeftWidget:
+                            icon: "history"
+                            theme_text_color: "Custom"
+                            text_color: 0.75, 0.87, 1, 1
+                    OneLineIconListItem:
+                        text: "Mode Sombre" if not app.dark_mode else "Mode Clair"
+                        theme_text_color: "Custom"
+                        text_color: 0.95, 0.96, 1, 1
+                        on_release:
+                            root.close_drawer()
+                            app.toggle_dark_mode()
+                        IconLeftWidget:
+                            icon: "weather-night" if not app.dark_mode else "white-balance-sunny"
+                            theme_text_color: "Custom"
+                            text_color: 0.75, 0.87, 1, 1
+                    OneLineIconListItem:
+                        text: "Deconnexion"
+                        theme_text_color: "Custom"
+                        text_color: 0.95, 0.96, 1, 1
+                        on_release: root.nav_logout()
+                        IconLeftWidget:
+                            icon: "logout"
+                            theme_text_color: "Custom"
+                            text_color: 0.75, 0.87, 1, 1
+
+<SearchScreen>:
+    MDScreen:
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: dp(0)
+            padding: dp(0)
+            md_bg_color: 0.96, 0.97, 0.98, 1
+
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: dp(50)
+                md_bg_color: bar_blue
+                padding: dp(0), 0, dp(4), 0
+                MDIconButton:
+                    icon: "arrow-left"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    on_release: root.back_to_market()
+                    size_hint: None, None
+                    size: dp(50), dp(50)
+                MDLabel:
+                    text: "Recherche"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    font_style: "H6"
+                    size_hint_x: 1
+                    halign: "left"
+                    valign: "center"
+                MDIconButton:
+                    icon: "cart"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    on_release: app.open_cart()
+                    size_hint: None, None
+                    size: dp(50), dp(50)
+                    FloatLayout:
+                        size: dp(0), dp(0)
+                        MDLabel:
+                            text: str(app.cart_badge_count) if app.cart_badge_count else ""
+                            size_hint: None, None
+                            size: dp(18), dp(18)
+                            halign: "center"
+                            valign: "middle"
+                            font_size: "10sp"
+                            theme_text_color: "Custom"
+                            text_color: 1, 1, 1, 1
+                            md_bg_color: 0.85, 0.15, 0.2, 1
+                            radius: [9, 9, 9, 9]
+                            pos_hint: {"right": 0.1, "top": 0.9}
+                            opacity: 1 if app.cart_badge_count else 0
+
+            Widget:
+                size_hint_y: None
+                height: dp(12)
+
+            MDCard:
+                size_hint_y: None
+                height: dp(110)
+                md_bg_color: 1, 1, 1, 1
+                padding: dp(12)
+                radius: [14, 14, 14, 14]
+                elevation: 3
+                margin: dp(10)
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: dp(8)
+                    MDTextField:
+                        id: search_field
+                        hint_text: "Rechercher un produit..."
+                        mode: "rectangle"
+                        on_text_validate: root.apply_search_bar()
+                        on_text: root.on_search_text(self.text)
+                        size_hint_y: None
+                        height: dp(46)
+                    MDBoxLayout:
+                        spacing: dp(8)
+                        size_hint_y: None
+                        height: dp(40)
+                        MDRaisedButton:
+                            text: "Filtres"
+                            icon: "tune-variant"
+                            size_hint_x: 1
+                            height: dp(40)
+                            on_release: root.open_filters()
+                        MDIconButton:
+                            icon: "magnify"
+                            theme_text_color: "Custom"
+                            text_color: bar_blue
+                            size_hint: None, None
+                            size: dp(40), dp(40)
+                            on_release: root.apply_search_bar()
+
+            Widget:
+                size_hint_y: None
+                height: dp(8)
+
+            MDLabel:
+                text: root.message
+                theme_text_color: "Secondary"
+                size_hint_y: None
+                height: dp(22)
+                font_size: "12sp"
+                padding: dp(12), dp(0)
+                height: dp(22)
+                font_size: "12sp"
+                padding: dp(10), dp(2)
+
+            ScrollView:
+                size_hint_y: 1
+                do_scroll_x: False
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: dp(10)
+                    adaptive_height: True
+                    padding: dp(8), dp(8), dp(8), dp(16)
+                    
+                    MDGridLayout:
+                        id: search_products
+                        cols: 2
+                        spacing: dp(10)
+                        adaptive_height: True
+                        padding: dp(0)
+                    
+                    MDCard:
+                        id: empty_state
+                        orientation: "vertical"
+                        size_hint_y: None
+                        height: dp(180)
+                        md_bg_color: 0.97, 0.98, 1, 1
+                        radius: [14, 14, 14, 14]
+                        padding: dp(16)
+                        opacity: 0
+                        
+                        MDIcon:
+                            icon: "magnify-close"
+                            theme_text_color: "Custom"
+                            text_color: 0.5, 0.5, 0.5, 1
+                            font_size: dp(50)
+                            size_hint: None, None
+                            size: dp(50), dp(50)
+                            pos_hint: {"center_x": 0.5}
+                        
+                        MDLabel:
+                            text: "Aucun produit trouvé"
+                            theme_text_color: "Secondary"
+                            font_style: "Subtitle1"
+                            halign: "center"
+                            size_hint_y: None
+                            height: dp(30)
+                        
+                        MDLabel:
+                            text: "Essayez d'autres mots-clés"
+                            theme_text_color: "Hint"
+                            font_size: "11sp"
+                            halign: "center"
+                            size_hint_y: None
+                            height: dp(20)
+
+<ShopScreen>:
+    MDScreen:
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: dp(0)
+            padding: dp(0)
+
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: dp(50)
+                md_bg_color: bar_blue
+                padding: dp(0), 0, dp(4), 0
+                MDIconButton:
+                    icon: "arrow-left"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    on_release: setattr(app.root, "current", "market")
+                    size_hint: None, None
+                    size: dp(50), dp(50)
+                MDLabel:
+                    id: shop_profile_name
+                    text: "Boutique"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    font_style: "H6"
+                    size_hint_x: 1
+                    halign: "left"
+                    valign: "center"
+                MDIconButton:
+                    icon: "cart"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    on_release: app.open_cart()
+                    size_hint: None, None
+                    size: dp(50), dp(50)
+
+            ScrollView:
+                size_hint_y: 1
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: dp(0)
+                    adaptive_height: True
+
+                    RelativeLayout:
+                        size_hint_y: None
+                        height: dp(160)
+                        
+                        FitImage:
+                            id: shop_banner
+                            source: "https://picsum.photos/seed/banner/800/300"
+                            size_hint: 1, 1
+                            allow_stretch: True
+                        
+                        FloatLayout:
+                            size_hint: None, None
+                            size: dp(90), dp(90)
+                            pos_hint: {"center_x": 0.5, "center_y": 0.7}
+                            
+                            canvas.before:
+                                Color:
+                                    rgba: 1, 1, 1, 1
+                                Ellipse:
+                                    pos: self.pos
+                                    size: self.size
+                            
+                            FitImage:
+                                id: shop_logo
+                                source: "https://picsum.photos/seed/logo/200/200"
+                                size_hint: None, None
+                                size: dp(86), dp(86)
+                                pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                                radius: [43, 43, 43, 43]
+                        
+                        MDLabel:
+                            id: shop_name_header
+                            text: "Boutique"
+                            bold: True
+                            font_style: "H5"
+                            theme_text_color: "Custom"
+                            text_color: 0.13, 0.278, 0.631, 1
+                            halign: "center"
+                            size_hint: 1, None
+                            height: dp(40)
+                            pos_hint: {"center_x": 0.5, "center_y": 0.15}
+
+                    MDBoxLayout:
+                        orientation: "vertical"
+                        spacing: dp(12)
+                        padding: dp(16)
+                        adaptive_height: True
+
+                        MDLabel:
+                            id: subscriber_count
+                            text: "0 abonné(s)"
+                            theme_text_color: "Secondary"
+                            font_style: "Caption"
+                            halign: "center"
+                            size_hint_y: None
+                            height: dp(20)
+
+                        MDRaisedButton:
+                            id: subscribe_btn
+                            text: "S'abonner"
+                            md_bg_color: 0.13, 0.59, 0.95, 1
+                            on_release: root.toggle_subscription()
+                            size_hint_y: None
+                            height: dp(44)
+
+                        MDLabel:
+                            id: shop_message
+                            text: root.message
+                            theme_text_color: "Custom"
+                            text_color: 0.2, 0.7, 0.3, 1
+                            halign: "center"
+                            size_hint_y: None
+                            height: dp(24)
+                            opacity: 1 if root.message else 0
+
+                        MDLabel:
+                            text: "Description"
+                            font_style: "H6"
+                            theme_text_color: "Primary"
+                            size_hint_y: None
+                            height: dp(30)
+
+                        MDLabel:
+                            id: shop_desc
+                            text: "-"
+                            theme_text_color: "Secondary"
+                            size_hint_y: None
+                            height: self.texture_size[1]
+                            text_size: self.size
+
+                        MDSeparator:
+                            height: dp(16)
+
+                        MDLabel:
+                            text: "Produits"
+                            font_style: "H6"
+                            theme_text_color: "Primary"
+                            size_hint_y: None
+                            height: dp(30)
+
+                        MDGridLayout:
+                            id: shop_products
+                            cols: 2
+                            spacing: dp(10)
+                            adaptive_height: True
+
+<FavoritesScreen>:
+    MDScreen:
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: dp(0)
+            padding: dp(0)
+            md_bg_color: 0.96, 0.97, 0.98, 1
+            
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: dp(50)
+                md_bg_color: bar_blue
+                padding: dp(0), 0, dp(4), 0
+                MDIconButton:
+                    icon: "arrow-left"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    on_release: setattr(app.root, "current", "market")
+                    size_hint: None, None
+                    size: dp(50), dp(50)
+                MDLabel:
+                    text: "Mes Favoris"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    font_style: "H6"
+                    size_hint_x: 1
+                    halign: "left"
+                    valign: "center"
+            
+            MDLabel:
+                text: root.message
+                theme_text_color: "Secondary"
+                halign: "center"
+                size_hint_y: None
+                height: dp(24)
+            
+            ScrollView:
+                size_hint_y: 1
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: dp(10)
+                    padding: dp(12)
+                    adaptive_height: True
+                    
+                    MDGridLayout:
+                        id: favorites_grid
+                        cols: 2
+                        spacing: dp(10)
+                        adaptive_height: True
+
+<HistoryScreen>:
+    MDScreen:
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: dp(0)
+            padding: dp(0)
+            md_bg_color: 0.96, 0.97, 0.98, 1
+            
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: dp(50)
+                md_bg_color: bar_blue
+                padding: dp(0), 0, dp(4), 0
+                MDIconButton:
+                    icon: "arrow-left"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    on_release: setattr(app.root, "current", "market")
+                    size_hint: None, None
+                    size: dp(50), dp(50)
+                MDLabel:
+                    text: "Historique"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    font_style: "H6"
+                    size_hint_x: 1
+                    halign: "left"
+                    valign: "center"
+                MDIconButton:
+                    icon: "trash-can-outline"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    size_hint: None, None
+                    size: dp(50), dp(50)
+                    on_release: root.clear_history()
+            
+            MDLabel:
+                text: root.message
+                theme_text_color: "Secondary"
+                halign: "center"
+                size_hint_y: None
+                height: dp(24)
+            
+            ScrollView:
+                size_hint_y: 1
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: dp(10)
+                    padding: dp(12)
+                    adaptive_height: True
+                    
+                    MDGridLayout:
+                        id: history_grid
+                        cols: 2
+                        spacing: dp(10)
+                        adaptive_height: True
+
+<ProductDetailsScreen>:
+    MDScreen:
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: dp(0)
+            padding: dp(0)
+
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: dp(50)
+                md_bg_color: bar_blue
+                padding: dp(0), 0, dp(4), 0
+                MDIconButton:
+                    icon: "arrow-left"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    on_release: setattr(app.root, "current", "market")
+                    size_hint: None, None
+                    size: dp(50), dp(50)
+                MDLabel:
+                    text: "Detail produit"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    font_style: "H6"
+                    size_hint_x: 1
+                    halign: "left"
+                    valign: "center"
+                MDIconButton:
+                    icon: "cart"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    on_release: app.open_cart()
+                    size_hint: None, None
+                    size: dp(50), dp(50)
+                    FloatLayout:
+                        size: dp(0), dp(0)
+                        MDLabel:
+                            text: str(app.cart_badge_count) if app.cart_badge_count else ""
+                            size_hint: None, None
+                            size: dp(18), dp(18)
+                            halign: "center"
+                            valign: "middle"
+                            font_size: "10sp"
+                            theme_text_color: "Custom"
+                            text_color: 1, 1, 1, 1
+                            md_bg_color: 0.85, 0.15, 0.2, 1
+                            radius: [9, 9, 9, 9]
+                            pos_hint: {"right": 0.1, "top": 0.9}
+                            opacity: 1 if app.cart_badge_count else 0
+
+            MDCarousel:
+                id: image_carousel
+                size_hint_y: None
+                height: dp(280)
+                loop: True
+                on_index: root.on_carousel_change()
+                
+                FitImage:
+                    id: d_image
+                    size_hint: 1, None
+                    height: dp(280)
+                    allow_stretch: True
+                
+                FitImage:
+                    id: d_image_2
+                    size_hint: 1, None
+                    height: dp(280)
+                    allow_stretch: True
+                    opacity: 0
+                
+                FitImage:
+                    id: d_image_3
+                    size_hint: 1, None
+                    height: dp(280)
+                    allow_stretch: True
+                    opacity: 0
+
+            MDBoxLayout:
+                size_hint_y: None
+                height: dp(30)
+                spacing: dp(8)
+                padding: dp(12), 0
+                MDLabel:
+                    text: "Glissez pour voir d'autres angles"
+                    theme_text_color: "Hint"
+                    font_size: "11sp"
+                    size_hint_y: None
+                    height: dp(20)
+
+            ScrollView:
+                size_hint_y: 1
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: dp(12)
+                    padding: dp(16)
+                    adaptive_height: True
+                    
+                    MDLabel:
+                        id: d_title
+                        text: "Produit"
+                        bold: True
+                        font_size: "20sp"
+                        theme_text_color: "Primary"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                    
+                    MDLabel:
+                        id: d_price
+                        text: "-"
+                        bold: True
+                        font_size: "22sp"
+                        theme_text_color: "Custom"
+                        text_color: 0.13, 0.59, 0.95, 1
+                        size_hint_y: None
+                        height: dp(30)
+                    
+                    MDCard:
+                        orientation: "horizontal"
+                        padding: dp(12)
+                        radius: [10, 10, 10, 10]
+                        size_hint_y: None
+                        height: self.minimum_height
+                        
+                        MDIcon:
+                            icon: "store"
+                            theme_text_color: "Primary"
+                            size_hint: None, None
+                            size: dp(24), dp(24)
+                        
+                        MDLabel:
+                            id: d_shop
+                            text: "-"
+                            theme_text_color: "Secondary"
+                            font_size: "13sp"
+                            padding: dp(8), 0
+                    
+                    MDCard:
+                        orientation: "horizontal"
+                        padding: dp(12)
+                        radius: [10, 10, 10, 10]
+                        size_hint_y: None
+                        height: self.minimum_height
+                        
+                        MDIcon:
+                            icon: "tag"
+                            theme_text_color: "Secondary"
+                            size_hint: None, None
+                            size: dp(24), dp(24)
+                        
+                        MDLabel:
+                            id: d_category
+                            text: "-"
+                            theme_text_color: "Secondary"
+                            font_size: "13sp"
+                            padding: dp(8), 0
+                    
+                    MDCard:
+                        orientation: "horizontal"
+                        padding: dp(12)
+                        radius: [10, 10, 10, 10]
+                        size_hint_y: None
+                        height: self.minimum_height
+                        
+                        MDIcon:
+                            icon: "package-variant"
+                            theme_text_color: "Custom"
+                            text_color: 0.2, 0.7, 0.3, 1
+                            size_hint: None, None
+                            size: dp(24), dp(24)
+                        
+                        MDLabel:
+                            id: d_stock
+                            text: "-"
+                            theme_text_color: "Custom"
+                            text_color: 0.2, 0.7, 0.3, 1
+                            font_size: "13sp"
+                            padding: dp(8), 0
+                    
+                    MDLabel:
+                        text: "Description"
+                        bold: True
+                        font_size: "16sp"
+                        theme_text_color: "Primary"
+                        size_hint_y: None
+                        height: dp(24)
+                    
+                    MDLabel:
+                        id: d_desc
+                        text: "-"
+                        theme_text_color: "Secondary"
+                        font_size: "13sp"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.size
+                    
+                    MDSeparator:
+                        height: dp(16)
+                    
+                    MDLabel:
+                        text: "Avis clients"
+                        bold: True
+                        font_size: "16sp"
+                        theme_text_color: "Primary"
+                        size_hint_y: None
+                        height: dp(24)
+                    
+                    MDCard:
+                        orientation: "horizontal"
+                        padding: dp(12)
+                        radius: [10, 10, 10, 10]
+                        size_hint_y: None
+                        height: dp(60)
+                        md_bg_color: 0.97, 0.98, 1, 1
+                        
+                        MDIcon:
+                            icon: "star"
+                            theme_text_color: "Custom"
+                            text_color: 1.0, 0.8, 0.0, 1
+                            size_hint: None, None
+                            size: dp(28), dp(28)
+                        
+                        MDLabel:
+                            id: d_rating
+                            text: "0.0"
+                            bold: True
+                            font_size: "20sp"
+                            theme_text_color: "Primary"
+                            padding: dp(8), 0
+                        
+                        MDLabel:
+                            id: d_rating_count
+                            text: "(0 avis)"
+                            theme_text_color: "Secondary"
+                            font_size: "12sp"
+                            padding: dp(4), 0
+                        
+                        Widget:
+                        
+                        MDRaisedButton:
+                            id: add_review_btn
+                            text: "Laisser un avis"
+                            md_bg_color: 0.13, 0.59, 0.95, 1
+                            font_size: "11sp"
+                            height: dp(36)
+                            on_release: root.open_review_dialog()
+                    
+                    MDCard:
+                        orientation: "vertical"
+                        padding: dp(12)
+                        radius: [10, 10, 10, 10]
+                        size_hint_y: None
+                        height: self.minimum_height
+                        id: reviews_container
+                        
+                        MDLabel:
+                            id: no_reviews
+                            text: "Aucun avis pour le moment"
+                            theme_text_color: "Hint"
+                            font_size: "12sp"
+                            halign: "center"
+                            size_hint_y: None
+                            height: dp(40)
+                    
+                    Widget:
+                        size_hint_y: None
+                        height: dp(16)
+                    
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        spacing: dp(12)
+                        size_hint_y: None
+                        height: dp(48)
+                        MDTextField:
+                            id: d_qty
+                            hint_text: "Qte"
+                            text: "1"
+                            mode: "rectangle"
+                            input_filter: "int"
+                            size_hint_x: 0.3
+                            height: dp(48)
+                        MDRaisedButton:
+                            text: "Ajouter au panier"
+                            md_bg_color: 0.13, 0.61, 0.55, 1
+                            font_size: "14sp"
+                            on_release: root.request_add_to_cart()
+                    
+                    MDLabel:
+                        text: root.message
+                        theme_text_color: "Error"
+                        size_hint_y: None
+                        height: dp(24)
+                    
+                    Widget:
+                        size_hint_y: None
+                        height: dp(20)
+
+<CartScreen>:
+    MDScreen:
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: dp(0)
+            padding: dp(0)
+            md_bg_color: 0.96, 0.97, 0.98, 1
+            
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: dp(50)
+                md_bg_color: bar_blue
+                padding: dp(0), 0, dp(4), 0
+                MDIconButton:
+                    icon: "arrow-left"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    on_release: setattr(app.root, "current", "market")
+                    size_hint: None, None
+                    size: dp(50), dp(50)
+                MDLabel:
+                    text: "Mon Panier"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    font_style: "H6"
+                    size_hint_x: 1
+                    halign: "left"
+                    valign: "center"
+            
+            MDCard:
+                size_hint_y: None
+                height: dp(60)
+                md_bg_color: 0.13, 0.59, 0.95, 1
+                radius: [0, 0, 0, 0]
+                padding: dp(16)
+                MDLabel:
+                    id: cart_total
+                    text: "Total: 0.00 credits"
+                    theme_text_color: "Custom"
+                    text_color: 1, 1, 1, 1
+                    font_style: "H6"
+                    bold: True
+            
+            ScrollView:
+                size_hint_y: 1
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: dp(10)
+                    padding: dp(12)
+                    adaptive_height: True
+                    
+                    MDGridLayout:
+                        id: cart_items
+                        cols: 1
+                        adaptive_height: True
+                        spacing: dp(10)
+            
+            MDLabel:
+                text: root.message
+                theme_text_color: "Error"
+                halign: "center"
+                size_hint_y: None
+                height: dp(24)
+            
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: dp(56)
+                spacing: dp(8)
+                padding: dp(12), dp(8)
+                MDRaisedButton:
+                    text: "Vider le panier"
+                    md_bg_color: 0.75, 0.75, 0.75, 1
+                    on_release: root.clear_cart()
+                MDRaisedButton:
+                    text: "Commander"
+                    md_bg_color: 0.13, 0.59, 0.95, 1
+                    on_release: root.commander()
+
+<OrdersScreen>:
+    MDScreen:
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: dp(0)
+            padding: dp(0)
+            md_bg_color: 0.96, 0.97, 0.98, 1
+            
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: dp(50)
+                md_bg_color: bar_blue
+                padding: dp(0), 0, dp(4), 0
+                MDIconButton:
+                    icon: "arrow-left"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    on_release: setattr(app.root, "current", "market")
+                    size_hint: None, None
+                    size: dp(50), dp(50)
+                MDLabel:
+                    text: "Mes commandes"
+                    theme_text_color: "Custom"
+                    text_color: bar_text
+                    font_style: "H6"
+                    size_hint_x: 1
+                    halign: "left"
+                    valign: "center"
+            
+            MDLabel:
+                text: root.message
+                theme_text_color: "Secondary"
+                halign: "center"
+                size_hint_y: None
+                height: dp(24)
+            
+            ScrollView:
+                size_hint_y: 1
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: dp(10)
+                    padding: dp(12)
+                    adaptive_height: True
+                    
+                    MDGridLayout:
+                        id: client_orders
+                        cols: 1
+                        adaptive_height: True
+                        spacing: dp(10)
+
+<AccountScreen>:
+    MDScreen:
+        MDBoxLayout:
+            orientation: "vertical"
+            padding: dp(10)
+            spacing: dp(8)
+            MDTopAppBar:
+                title: "Mon Compte"
+                elevation: 2
+                md_bg_color: bar_blue
+                specific_text_color: bar_text
+                left_action_items: [["arrow-left", lambda x: setattr(app.root, "current", "market")]]
+            ScrollView:
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: dp(16)
+                    adaptive_height: True
+                    padding: dp(12)
+                    
+                    # Avatar et nom
+                    MDCard:
+                        orientation: "vertical"
+                        padding: dp(20)
+                        spacing: dp(12)
+                        size_hint_y: None
+                        height: dp(180)
+                        md_bg_color: 0.13, 0.59, 0.95, 1
+                        
+                        MDIcon:
+                            icon: "account-circle"
+                            theme_text_color: "Custom"
+                            text_color: 1, 1, 1, 1
+                            font_size: dp(80)
+                            size_hint: None, None
+                            size: dp(80), dp(80)
+                            pos_hint: {"center_x": 0.5}
+                        
+                        MDLabel:
+                            id: profile_name_header
+                            text: "Utilisateur"
+                            theme_text_color: "Custom"
+                            text_color: 1, 1, 1, 1
+                            font_style: "H5"
+                            bold: True
+                            halign: "center"
+                            size_hint_y: None
+                            height: dp(30)
+                        
+                        MDLabel:
+                            id: profile_email_header
+                            text: "email@example.com"
+                            theme_text_color: "Custom"
+                            text_color: 0.9, 0.95, 1, 1
+                            font_style: "Caption"
+                            halign: "center"
+                            size_hint_y: None
+                            height: dp(20)
+                    
+                    # Informations personnelles
+                    MDCard:
+                        orientation: "vertical"
+                        padding: dp(16)
+                        spacing: dp(12)
+                        size_hint_y: None
+                        height: self.minimum_height
+                        md_bg_color: 1, 1, 1, 1
+                        
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            size_hint_y: None
+                            height: dp(24)
+                            spacing: dp(8)
+                            MDIcon:
+                                icon: "information"
+                                theme_text_color: "Custom"
+                                text_color: 0.13, 0.59, 0.95, 1
+                                size_hint: None, None
+                                size: dp(24), dp(24)
+                            MDLabel:
+                                text: "Informations personnelles"
+                                font_style: "H6"
+                                theme_text_color: "Custom"
+                                text_color: 0.2, 0.2, 0.2, 1
+                                size_hint_y: None
+                                height: dp(24)
+                        
+                        MDSeparator:
+                            size_hint_y: None
+                            height: dp(1)
+                            color: 0.9, 0.9, 0.9, 1
+                        
+                        # Nom complet
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            size_hint_y: None
+                            height: dp(56)
+                            spacing: dp(12)
+                            MDIcon:
+                                icon: "account"
+                                theme_text_color: "Custom"
+                                text_color: 0.5, 0.5, 0.5, 1
+                                size_hint: None, None
+                                size: dp(24), dp(24)
+                            MDTextField:
+                                id: acc_name
+                                hint_text: "Nom complet"
+                                mode: "rectangle"
+                                size_hint_y: None
+                                height: dp(56)
+                                icon_left: "account-edit"
+                        
+                        # Email
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            size_hint_y: None
+                            height: dp(56)
+                            spacing: dp(12)
+                            MDIcon:
+                                icon: "email"
+                                theme_text_color: "Custom"
+                                text_color: 0.5, 0.5, 0.5, 1
+                                size_hint: None, None
+                                size: dp(24), dp(24)
+                            MDTextField:
+                                id: acc_email
+                                hint_text: "Email"
+                                mode: "rectangle"
+                                readonly: True
+                                size_hint_y: None
+                                height: dp(56)
+                                icon_left: "lock"
+                        
+                        # Téléphone
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            size_hint_y: None
+                            height: dp(56)
+                            spacing: dp(12)
+                            MDIcon:
+                                icon: "phone"
+                                theme_text_color: "Custom"
+                                text_color: 0.5, 0.5, 0.5, 1
+                                size_hint: None, None
+                                size: dp(24), dp(24)
+                            MDTextField:
+                                id: acc_phone
+                                hint_text: "Téléphone"
+                                mode: "rectangle"
+                                size_hint_y: None
+                                height: dp(56)
+                                icon_left: "phone-edit"
+                        
+                        # Adresse
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            size_hint_y: None
+                            height: dp(56)
+                            spacing: dp(12)
+                            MDIcon:
+                                icon: "map-marker"
+                                theme_text_color: "Custom"
+                                text_color: 0.5, 0.5, 0.5, 1
+                                size_hint: None, None
+                                size: dp(24), dp(24)
+                            MDTextField:
+                                id: acc_address
+                                hint_text: "Adresse"
+                                mode: "rectangle"
+                                size_hint_y: None
+                                height: dp(56)
+                                icon_left: "pencil"
+                        
+                        # Date de naissance
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            size_hint_y: None
+                            height: dp(56)
+                            spacing: dp(12)
+                            MDIcon:
+                                icon: "calendar"
+                                theme_text_color: "Custom"
+                                text_color: 0.5, 0.5, 0.5, 1
+                                size_hint: None, None
+                                size: dp(24), dp(24)
+                            MDTextField:
+                                id: acc_birth_date
+                                hint_text: "Date de naissance"
+                                mode: "rectangle"
+                                readonly: True
+                                size_hint_y: None
+                                height: dp(56)
+                                icon_left: "lock"
+                        
+                        # Genre
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            size_hint_y: None
+                            height: dp(56)
+                            spacing: dp(12)
+                            MDIcon:
+                                icon: "gender-male-female"
+                                theme_text_color: "Custom"
+                                text_color: 0.5, 0.5, 0.5, 1
+                                size_hint: None, None
+                                size: dp(24), dp(24)
+                            MDTextField:
+                                id: acc_gender
+                                hint_text: "Genre"
+                                mode: "rectangle"
+                                readonly: True
+                                size_hint_y: None
+                                height: dp(56)
+                                icon_left: "lock"
+                        
+                        MDSeparator:
+                            size_hint_y: None
+                            height: dp(8)
+                        
+                        # Bouton sauvegarder
+                        MDRaisedButton:
+                            text: "Sauvegarder les modifications"
+                            md_bg_color: 0.13, 0.59, 0.95, 1
+                            text_color: 1, 1, 1, 1
+                            on_release: root.save_profile()
+                            size_hint_x: 1
+                            size_hint_y: None
+                            height: dp(50)
+                    
+                    # Message
+                    MDLabel:
+                        id: message_label
+                        text: root.message
+                        theme_text_color: "Error"
+                        halign: "center"
+                        size_hint_y: None
+                        height: dp(30)
+                        opacity: 1 if root.message else 0
+
+<ContactAdminScreen>:
+    MDScreen:
+        MDBoxLayout:
+            orientation: "vertical"
+            
+            MDTopAppBar:
+                title: "Contacter Admin"
+                elevation: 2
+                md_bg_color: bar_blue
+                specific_text_color: bar_text
+                left_action_items: [["arrow-left", lambda x: setattr(app.root, "current", "market")]]
+            
+            MDBoxLayout:
+                orientation: "vertical"
+                padding: dp(16)
+                spacing: dp(12)
+                
+                MDLabel:
+                    text: "Envoyer un message à l'admin"
+                    bold: True
+                    font_size: "18sp"
+                    size_hint_y: None
+                    height: dp(30)
+                    halign: "center"
+                
+                MDTextField:
+                    id: contact_subject
+                    hint_text: "Sujet"
+                    mode: "rectangle"
+                    size_hint_y: None
+                    height: dp(50)
+                
+                MDTextField:
+                    id: contact_message
+                    hint_text: "Votre message..."
+                    mode: "rectangle"
+                    multiline: True
+                    size_hint_y: 1
+                
+                MDRaisedButton:
+                    text: "Envoyer"
+                    md_bg_color: 0.13, 0.59, 0.95, 1
+                    size_hint_y: None
+                    height: dp(50)
+                    on_release: root.send_message()
+                
+                MDLabel:
+                    text: root.message
+                    theme_text_color: "Custom"
+                    text_color: 0.13, 0.59, 0.95, 1
+                    halign: "center"
+                    size_hint_y: None
+                    height: dp(24)
+                
+                MDLabel:
+                    text: "Mes messages"
+                    bold: True
+                    font_size: "16sp"
+                    size_hint_y: None
+                    height: dp(30)
+                
+                ScrollView:
+                    size_hint_y: 2
+                    do_scroll_x: False
+                    
+                    MDBoxLayout:
+                        id: messages_container
+                        orientation: "vertical"
+                        spacing: dp(10)
+                        adaptive_height: True
+                        size_hint_x: 1
+
+<VerificationScreen>:
+    MDScreen:
+        md_bg_color: 0.96, 0.97, 0.98, 1
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: dp(0)
+            padding: dp(0)
+
+            MDTopAppBar:
+                title: "Verification email"
+                elevation: 2
+                md_bg_color: bar_blue
+                specific_text_color: bar_text
+
+            MDBoxLayout:
+                orientation: "vertical"
+                spacing: dp(16)
+                padding: dp(24)
+                adaptive_height: True
+                size_hint_y: None
+                pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+                FitImage:
+                    source: "img/Fichier 3_102810.png"
+                    size_hint: None, None
+                    size: dp(80), dp(80)
+                    pos_hint: {"center_x": 0.5}
+                    radius: [12, 12, 12, 12]
+
+                MDLabel:
+                    text: "Verification email"
+                    font_style: "H5"
+                    bold: True
+                    halign: "center"
+                    size_hint_y: None
+                    height: dp(36)
+
+                MDLabel:
+                    text: "Un code a 6 chiffres a ete envoye a votre adresse email."
+                    theme_text_color: "Secondary"
+                    halign: "center"
+                    size_hint_y: None
+                    height: dp(40)
+                    font_size: "13sp"
+
+                MDLabel:
+                    id: debug_code_label
+                    text: ""
+                    theme_text_color: "Hint"
+                    halign: "center"
+                    size_hint_y: None
+                    height: dp(20)
+                    font_size: "11sp"
+
+                MDTextField:
+                    id: code_input
+                    hint_text: "Code a 6 chiffres"
+                    mode: "rectangle"
+                    input_filter: "int"
+                    max_text_length: 6
+                    size_hint_y: None
+                    height: dp(56)
+                    halign: "center"
+                    font_size: "24sp"
+
+                MDLabel:
+                    text: root.message
+                    theme_text_color: "Error"
+                    halign: "center"
+                    size_hint_y: None
+                    height: dp(30)
+
+                MDRaisedButton:
+                    text: "Verifier"
+                    md_bg_color: 0.13, 0.59, 0.95, 1
+                    on_release: root.verify_code()
+                    size_hint_y: None
+                    height: dp(50)
+
+                MDFlatButton:
+                    text: "Renvoyer le code"
+                    theme_text_color: "Custom"
+                    text_color: 0.13, 0.59, 0.95, 1
+                    on_release: root.resend_code()
+                    disabled: not root.can_resend
+                    size_hint_y: None
+                    height: dp(40)
+
+RootManager:
+    LoginScreen:
+        name: "login"
+    SignupStep1Screen:
+        name: "signup_step1"
+    SignupStep2Screen:
+        name: "signup_step2"
+    SignupStep3Screen:
+        name: "signup_step3"
+    SignupStep5Screen:
+        name: "signup_step5"
+    SignupStep6Screen:
+        name: "signup_step6"
+    VerificationScreen:
+        name: "verify_email"
+    SignupScreen:
+        name: "signup"
+    MarketScreen:
+        name: "market"
+    SearchScreen:
+        name: "search"
+    ShopScreen:
+        name: "shop"
+    ProductDetailsScreen:
+        name: "product_details"
+    CartScreen:
+        name: "cart"
+    OrdersScreen:
+        name: "orders"
+    AccountScreen:
+        name: "account"
+    ContactAdminScreen:
+        name: "contact_admin"
+    FavoritesScreen:
+        name: "favorites"
+    HistoryScreen:
+        name: "history"
+    LoadingScreen:
+        name: "loading"
+
+<LoadingScreen>:
+    MDScreen:
+        md_bg_color: bar_blue
+        
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: dp(20)
+            padding: dp(40)
+            
+            Widget:
+            
+            FitImage:
+                source: "img/Fichier 3_102810.png"
+                size_hint: None, None
+                size: dp(120), dp(120)
+                pos_hint: {"center_x": 0.5}
+                radius: [20, 20, 20, 20]
+            
+            MDLabel:
+                text: "Spaceness"
+                theme_text_color: "Custom"
+                text_color: 1, 1, 1, 1
+                font_style: "H4"
+                bold: True
+                halign: "center"
+            
+            MDLabel:
+                text: "Marketplace"
+                theme_text_color: "Custom"
+                text_color: 0.8, 0.9, 1, 1
+                font_style: "Subtitle1"
+                halign: "center"
+            
+            Widget:
+            
+            MDSpinner:
+                size_hint: None, None
+                size: dp(40), dp(40)
+                pos_hint: {"center_x": 0.5}
+                theme_text_color: "Custom"
+                text_color: 1, 1, 1, 1
+            
+            MDLabel:
+                text: "Chargement..."
+                theme_text_color: "Custom"
+                text_color: 0.9, 0.9, 0.9, 1
+                font_size: "12sp"
+                halign: "center"
+            
+            Widget:

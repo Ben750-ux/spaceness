@@ -1,0 +1,9 @@
+email_config.json
+session.json
+*.db
+__pycache__/
+.env
+*.egg-info/
+dist/
+build/
+.venv/

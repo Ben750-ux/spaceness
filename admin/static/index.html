@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spaceness - Admin</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-store"></i> Spaceness <span>Admin</span></h1>
+            <div>
+                <button id="btn-refresh" onclick="location.reload()"><i class="fas fa-sync-alt"></i> Actualiser</button>
+            </div>
+        </header>
+
+        <!-- Stats rapides -->
+        <div class="stats-grid">
+            <div class="stat-card" onclick="showTab('users')">
+                <div class="stat-icon" style="background:#667eea;"><i class="fas fa-users"></i></div>
+                <div class="stat-info">
+                    <h3>Utilisateurs</h3>
+                    <p class="stat-number" id="stat-users">-</p>
+                </div>
+            </div>
+            <div class="stat-card" onclick="showTab('products')">
+                <div class="stat-icon" style="background:#00b894;"><i class="fas fa-box"></i></div>
+                <div class="stat-info">
+                    <h3>Produits</h3>
+                    <p class="stat-number" id="stat-products">-</p>
+                </div>
+            </div>
+            <div class="stat-card" onclick="showTab('orders')">
+                <div class="stat-icon" style="background:#fdcb6e;"><i class="fas fa-shopping-cart"></i></div>
+                <div class="stat-info">
+                    <h3>Commandes</h3>
+                    <p class="stat-number" id="stat-orders">-</p>
+                </div>
+            </div>
+            <div class="stat-card" onclick="showTab('shops')">
+                <div class="stat-icon" style="background:#e74c3c;"><i class="fas fa-store"></i></div>
+                <div class="stat-info">
+                    <h3>Boutiques</h3>
+                    <p class="stat-number" id="stat-shops">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('dashboard')"><i class="fas fa-chart-line"></i> Dashboard</button>
+            <button class="tab" onclick="showTab('users')"><i class="fas fa-users"></i> Utilisateurs</button>
+            <button class="tab" onclick="showTab('products')"><i class="fas fa-box"></i> Produits</button>
+            <button class="tab" onclick="showTab('orders')"><i class="fas fa-shopping-cart"></i> Commandes</button>
+            <button class="tab" onclick="showTab('shops')"><i class="fas fa-store"></i> Boutiques</button>
+            <button class="tab" onclick="showTab('messages-clients')"><i class="fas fa-user"></i> Msg Clients <span id="badge-clients" class="badge">0</span></button>
+            <button class="tab" onclick="showTab('messages-shops')"><i class="fas fa-store-alt"></i> Msg Boutiques <span id="badge-shops" class="badge">0</span></button>
+            <button class="tab" onclick="showTab('activity')"><i class="fas fa-history"></i> Activité</button>
+        </div>
+
+        <!-- DASHBOARD -->
+        <div id="section-dashboard" class="section active">
+            <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;">
+                <div class="card">
+                    <h3><i class="fas fa-chart-bar"></i> Commandes (30 jours)</h3>
+                    <div id="daily-orders-chart" style="min-height:180px;"></div>
+                </div>
+                <div class="card">
+                    <h3><i class="fas fa-trophy"></i> Top Produits</h3>
+                    <div id="popular-products" style="max-height:200px;overflow-y:auto;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- UTILISATEURS -->
+        <div id="section-users" class="section">
+            <div class="card">
+                <div style="display:flex;gap:10px;align-items:center;">
+                    <input type="text" id="user-search" placeholder="Rechercher..." 
+                           style="flex:1;padding:12px;border:2px solid #e9ecef;border-radius:10px;"
+                           oninput="filterUsers(this.value)">
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nom</th>
+                            <th>Email</th>
+                            <th>Rôle</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PRODUITS -->
+        <div id="section-products" class="section">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nom</th>
+                            <th>Boutique</th>
+                            <th>Prix</th>
+                            <th>Stock</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="products-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- COMMANDES -->
+        <div id="section-orders" class="section">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Client</th>
+                            <th>Produit</th>
+                            <th>Qté</th>
+                            <th>Total</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orders-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- BOUTIQUES -->
+        <div id="section-shops" class="section">
+            <div class="card">
+                <h3><i class="fas fa-plus-circle"></i> Nouvelle boutique</h3>
+                <form id="create-shop-form">
+                    <div class="form-grid">
+                        <input type="text" id="shop-owner-name" placeholder="Nom responsable *" required>
+                        <input type="email" id="shop-owner-email" placeholder="Email *" required>
+                        <input type="password" id="shop-owner-password" placeholder="Mot de passe *" minlength="8" required>
+                        <input type="text" id="shop-new-name" placeholder="Nom boutique *" required>
+                        <input type="text" id="shop-new-description" placeholder="Description" style="grid-column:span 2;">
+                    </div>
+                    <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> Créer</button>
+                    <span id="create-shop-status" style="margin-left:15px;"></span>
+                </form>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Boutique</th>
+                            <th>Responsable</th>
+                            <th>Email</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shops-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- MESSAGES CLIENTS (CONVERSATIONS) -->
+        <div id="section-messages-clients" class="section conversations-section">
+            <div class="conversations-layout">
+                <div class="conversations-list">
+                    <div class="conversations-header">
+                        <h3><i class="fas fa-user"></i> Clients</h3>
+                        <button onclick="openNewClientMsg()" class="btn btn-sm btn-success"><i class="fas fa-plus"></i> Nouveau</button>
+                    </div>
+                    <div id="clients-list" class="conversation-items"></div>
+                </div>
+                <div class="conversation-content" id="client-conversation-area">
+                    <div class="no-conversation">
+                        <i class="fas fa-comments"></i>
+                        <p>Sélectionnez une conversation</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MESSAGES BOUTIQUES (CONVERSATIONS) -->
+        <div id="section-messages-shops" class="section conversations-section">
+            <div class="conversations-layout">
+                <div class="conversations-list">
+                    <div class="conversations-header">
+                        <h3><i class="fas fa-store"></i> Boutiques</h3>
+                    </div>
+                    <div id="shops-list" class="conversation-items"></div>
+                </div>
+                <div class="conversation-content" id="shop-conversation-area">
+                    <div class="no-conversation">
+                        <i class="fas fa-store-alt"></i>
+                        <p>Sélectionnez une conversation</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACTIVITÉ -->
+        <div id="section-activity" class="section">
+            <div class="card">
+                <h3><i class="fas fa-history"></i> Journal d'activité</h3>
+                <div id="activity-list" style="max-height:500px;overflow-y:auto;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDITION BOUTIQUE -->
+    <div id="edit-shop-modal" class="modal">
+        <div class="modal-content" style="max-width:500px;">
+            <h3><i class="fas fa-edit"></i> Modifier la boutique</h3>
+            <input type="hidden" id="edit-shop-id">
+            
+            <h4 style="margin-top:15px;color:#0a3d62;"><i class="fas fa-store"></i> Informations boutique</h4>
+            <div class="form-group">
+                <label>Nom de la boutique</label>
+                <input type="text" id="edit-shop-name" style="width:100%;padding:10px;border:2px solid #e9ecef;border-radius:8px;">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="edit-shop-desc" rows="2" style="width:100%;padding:10px;border:2px solid #e9ecef;border-radius:8px;"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Contact</label>
+                <input type="text" id="edit-shop-contact" style="width:100%;padding:10px;border:2px solid #e9ecef;border-radius:8px;">
+            </div>
+            <button onclick="saveShopInfo()" class="btn btn-primary" style="margin-top:10px;"><i class="fas fa-save"></i> Enregistrer</button>
+            
+            <h4 style="margin-top:25px;color:#0a3d62;"><i class="fas fa-user-cog"></i> Identifiants connexion</h4>
+            <div class="form-group">
+                <label>Nom du responsable</label>
+                <input type="text" id="edit-owner-name" style="width:100%;padding:10px;border:2px solid #e9ecef;border-radius:8px;">
+            </div>
+            <div class="form-group">
+                <label>Nouveau mot de passe (laisser vide pour ne pas changer)</label>
+                <input type="password" id="edit-owner-password" placeholder="8 caractères minimum" style="width:100%;padding:10px;border:2px solid #e9ecef;border-radius:8px;">
+            </div>
+            <div id="edit-shop-credentials-status" style="margin:10px 0;"></div>
+            <button onclick="saveShopCredentials()" class="btn btn-success"><i class="fas fa-key"></i> Mettre à jour identifiants</button>
+            
+            <div style="margin-top:20px;text-align:right;">
+                <button onclick="closeEditShopModal()" class="btn btn-secondary"><i class="fas fa-times"></i> Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ENVOI MESSAGE CLIENT -->
+    <div id="new-client-msg-modal" class="modal">
+        <div class="modal-content" style="max-width:450px;">
+            <h3><i class="fas fa-paper-plane"></i> Nouveau message au client</h3>
+            <div class="form-group">
+                <label>Destinataire</label>
+                <select id="new-msg-client" style="width:100%;padding:10px;border:2px solid #e9ecef;border-radius:8px;">
+                    <option value="">Sélectionner un client...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Sujet</label>
+                <input type="text" id="new-msg-client-subject" placeholder="Objet du message" style="width:100%;padding:10px;border:2px solid #e9ecef;border-radius:8px;">
+            </div>
+            <div class="form-group">
+                <label>Message</label>
+                <textarea id="new-msg-client-text" rows="4" placeholder="Votre message..." style="width:100%;padding:10px;border:2px solid #e9ecef;border-radius:8px;"></textarea>
+            </div>
+            <div style="text-align:right;margin-top:15px;">
+                <button onclick="closeNewClientMsg()" class="btn btn-secondary"><i class="fas fa-times"></i> Annuler</button>
+                <button onclick="sendNewClientMessage()" class="btn btn-success"><i class="fas fa-paper-plane"></i> Envoyer</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
