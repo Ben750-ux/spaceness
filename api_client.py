@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.request import Request, urlopen
 from urllib.parse import urlencode
 
-API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000")
+API_URL = os.environ.get("API_URL", "https://spaceness.onrender.com")
 
 
 def _api_url(path: str) -> str:
