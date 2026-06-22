@@ -198,34 +198,10 @@
                 elevation: 3
 
                 FitImage:
-                    source: "img/Fichier 3_102810.png"
+                    source: "img/placeholder_logo.png"
                     size_hint: None, None
                     size: dp(80), dp(80)
                     pos_hint: {"center_x": 0.5}
-                    radius: [12, 12, 12, 12]
-
-                MDTextField:
-                    id: login_email
-                    hint_text: "Email"
-                    helper_text_mode: "on_focus"
-                    mode: "rectangle"
-
-                MDTextField:
-                    id: login_password
-                    hint_text: "Mot de passe"
-                    password: True
-                    mode: "rectangle"
-
-                MDRaisedButton:
-                    text: "Se connecter"
-                    on_release: root.do_login()
-
-                MDFlatButton:
-                    text: "Creer un compte"
-                    theme_text_color: "Custom"
-                    text_color: ink_black
-                    line_color: ink_black
-                    on_release: app.start_signup()
 
                 MDLabel:
                     text: root.message
@@ -2209,7 +2185,7 @@
                 pos_hint: {"center_x": 0.5, "center_y": 0.5}
 
                 FitImage:
-                    source: "img/Fichier 3_102810.png"
+                    source: "img/placeholder_logo.png"
                     size_hint: None, None
                     size: dp(80), dp(80)
                     pos_hint: {"center_x": 0.5}
