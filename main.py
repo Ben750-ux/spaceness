@@ -1468,7 +1468,7 @@ class ShopMobileApp(MDApp):
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.accent_palette = "Amber"
         self.title = "Spaceness - Marketplace"
-        self.icon = "img/placeholder_icon.png"
+        self.icon = "img/logo.png"
         root = Builder.load_file("app.kv")
         self._load_session()
         self.update_cart_badge()
