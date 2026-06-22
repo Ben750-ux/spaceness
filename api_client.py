@@ -43,6 +43,18 @@ def create_user(full_name: str, email: str, password: str, role: str) -> Tuple[b
     return False, resp.get("detail", "Erreur lors de la creation du compte.")
 
 
+def forgot_password(email: str) -> Tuple[bool, str]:
+    resp = _post("/api/auth/forgot-password", {"email": email})
+    if resp.get("ok"):
+        return True, resp.get("code", "")
+    return False, resp.get("detail", "Erreur lors de l'envoi du code.")
+
+def reset_password(email: str, code: str, new_password: str) -> Tuple[bool, str]:
+    resp = _post("/api/auth/reset-password", {"email": email, "code": code, "new_password": new_password})
+    if resp.get("ok"):
+        return True, resp.get("message", "Mot de passe reinitialise.")
+    return False, resp.get("detail", "Erreur lors de la reinitialisation.")
+
 def login_user(email: str, password: str) -> Tuple[bool, str, Any]:
     resp = _post("/api/auth/login", {"email": email, "password": password})
     if resp.get("verification_required"):

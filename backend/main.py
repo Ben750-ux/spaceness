@@ -59,6 +59,16 @@ class SaveCodeRequest(BaseModel):
     code: str
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    code: str
+    new_password: str
+
+
 class ProductAddRequest(BaseModel):
     owner_user_id: int
     name: str
@@ -187,6 +197,21 @@ async def get_user(req: UserIdRequest):
         raise HTTPException(status_code=404, detail="Utilisateur introuvable")
     return {"ok": True, "user": user}
 
+
+# ============ MOT DE PASSE OUBLIE ============
+@app.post("/api/auth/forgot-password")
+async def forgot_password(req: ForgotPasswordRequest):
+    ok, code = await db.forgot_password(req.email)
+    if not ok:
+        raise HTTPException(status_code=404, detail=code)
+    return {"ok": True, "code": code}
+
+@app.post("/api/auth/reset-password")
+async def reset_password(req: ResetPasswordRequest):
+    ok, msg = await db.reset_password(req.email, req.code, req.new_password)
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"ok": True, "message": msg}
 
 # ============ PRODUITS ============
 @app.get("/api/products")

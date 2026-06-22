@@ -166,6 +166,51 @@ async def is_user_verified(user_id: int) -> bool:
         return bool(row)
 
 
+async def forgot_password(email: str) -> Tuple[bool, str]:
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.email == email.strip().lower())
+        )
+        row = result.scalar_one_or_none()
+        if not row:
+            return False, "Aucun compte trouve avec cet email."
+        code = _generate_verification_code()
+        expires = (_now() + timedelta(minutes=10)).isoformat()
+        await session.execute(
+            update(User)
+            .where(User.id == row.id)
+            .values(verification_code=code, verification_code_expires=expires)
+        )
+        await session.commit()
+        return True, code
+
+
+async def reset_password(email: str, code: str, new_password: str) -> Tuple[bool, str]:
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.email == email.strip().lower())
+        )
+        row = result.scalar_one_or_none()
+        if not row:
+            return False, "Aucun compte trouve avec cet email."
+        if not row.verification_code:
+            return False, "Aucun code de reinitialisation demande."
+        if row.verification_code != code:
+            return False, "Code incorrect."
+        expires = datetime.fromisoformat(row.verification_code_expires)
+        if _now() > expires:
+            return False, "Code expire. Demandez un nouveau code."
+        salt, pwd_hash = _hash_password(new_password)
+        await session.execute(
+            update(User)
+            .where(User.id == row.id)
+            .values(password_hash=pwd_hash, password_salt=salt,
+                   verification_code=None, verification_code_expires=None)
+        )
+        await session.commit()
+        return True, "Mot de passe reinitialise avec succes."
+
+
 # ============ SHOPS ============
 async def get_shop_by_owner(owner_user_id: int) -> Optional[Dict[str, Any]]:
     async with async_session() as session:

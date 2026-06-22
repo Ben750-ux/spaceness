@@ -399,6 +399,70 @@ Pour toute question, contactez-nous via l'Application.
             app.root.current = "signup_step6"
 
 
+class ForgotPasswordScreen(Screen):
+    message = StringProperty("")
+
+    def send_reset_code(self) -> None:
+        self.message = ""
+        email = self.ids.forgot_email.text.strip()
+        if not email:
+            self.message = "Veuillez entrer votre adresse email."
+            return
+        app = App.get_running_app()
+        app.loading_message = "Envoi du code de reinitialisation..."
+        app.root.current = "loading"
+        Clock.schedule_once(lambda dt: self._do_send_code(app, email), 0.3)
+
+    def _do_send_code(self, app, email):
+        ok, msg = db.forgot_password(email)
+        if not ok:
+            self.message = msg
+            app.root.current = "forgot_password"
+            return
+        app.pending_reset_email = email
+        app.pending_code = msg
+        app.root.current = "reset_password"
+
+class ResetPasswordScreen(Screen):
+    message = StringProperty("")
+
+    def on_pre_enter(self):
+        self.ids.reset_code.text = ""
+        self.ids.reset_password.text = ""
+        self.ids.reset_confirm.text = ""
+        self.message = ""
+        app = App.get_running_app()
+        if hasattr(app, "pending_code") and app.pending_code:
+            self.ids.reset_code.text = ""
+
+    def reset_password(self) -> None:
+        self.message = ""
+        code = self.ids.reset_code.text.strip()
+        password = self.ids.reset_password.text.strip()
+        confirm = self.ids.reset_confirm.text.strip()
+        if len(code) != 6 or not code.isdigit():
+            self.message = "Entrez le code a 6 chiffres recu par email."
+            return
+        if not password or len(password) < 6:
+            self.message = "Le mot de passe doit faire au moins 6 caracteres."
+            return
+        if password != confirm:
+            self.message = "Les mots de passe ne correspondent pas."
+            return
+        app = App.get_running_app()
+        email = getattr(app, "pending_reset_email", "")
+        if not email:
+            self.message = "Session expiree. Recommencez."
+            return
+        ok, msg = db.reset_password(email, code, password)
+        if not ok:
+            self.message = msg
+            return
+        app.pending_reset_email = None
+        app.pending_code = None
+        self.message = "Mot de passe reinitialise ! Connectez-vous."
+        Clock.schedule_once(lambda dt: setattr(app.root, "current", "login"), 2)
+
 class VerificationScreen(Screen):
     message = StringProperty("")
     can_resend = BooleanProperty(True)
@@ -1389,6 +1453,7 @@ class ShopMobileApp(MDApp):
     admin_notification = BooleanProperty(False)
     pending_user_id: Optional[int] = None
     pending_code: Optional[str] = None
+    pending_reset_email: Optional[str] = None
     loading_message = StringProperty("Chargement...")
 
     def start_signup(self) -> None:
