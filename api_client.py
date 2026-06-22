@@ -12,12 +12,21 @@ def _api_url(path: str) -> str:
 
 
 def _request(method: str, url: str, data: Any = None) -> Any:
+    from urllib.error import HTTPError
     headers = {"Content-Type": "application/json"}
     body = json.dumps(data).encode() if data else None
     req = Request(url, data=body, headers=headers, method=method)
     try:
         with urlopen(req, timeout=60) as resp:
             return json.loads(resp.read().decode())
+    except HTTPError as e:
+        detail = str(e)
+        try:
+            body = e.read().decode()
+            detail = json.loads(body).get("detail", detail)
+        except Exception:
+            pass
+        return {"ok": False, "detail": detail}
     except Exception as e:
         return {"ok": False, "detail": str(e)}
 
