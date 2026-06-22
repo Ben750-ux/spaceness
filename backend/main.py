@@ -69,6 +69,13 @@ class ResetPasswordRequest(BaseModel):
     new_password: str
 
 
+class AppVersionResponse(BaseModel):
+    latest_version: str = "1.0.0"
+    min_version: str = "1.0.0"
+    download_url: str = ""
+    update_message: str = ""
+
+
 class ProductAddRequest(BaseModel):
     owner_user_id: int
     name: str
@@ -212,6 +219,18 @@ async def reset_password(req: ResetPasswordRequest):
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
     return {"ok": True, "message": msg}
+
+# ============ VERSION APP ============
+@app.get("/api/app-version")
+async def get_app_version():
+    return {
+        "ok": True,
+        "latest_version": "1.0.1",
+        "min_version": "1.0.0",
+        "download_url": "",
+        "update_message": "",
+    }
+
 
 # ============ PRODUITS ============
 @app.get("/api/products")

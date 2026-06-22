@@ -1692,7 +1692,74 @@
                             font_size: "12sp"
                             padding: dp(4), 0
                         
-                        Widget:
+            Widget:
+
+<UpdateScreen>:
+    MDScreen:
+        md_bg_color: bar_blue
+
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: dp(20)
+            padding: dp(40)
+
+            Widget:
+
+            MDIcon:
+                icon: "cellphone-arrow-down"
+                font_size: dp(80)
+                size_hint: None, None
+                size: dp(80), dp(80)
+                pos_hint: {"center_x": 0.5}
+                theme_text_color: "Custom"
+                text_color: 1, 1, 1, 1
+
+            MDLabel:
+                id: update_title
+                text: "Mise à jour"
+                theme_text_color: "Custom"
+                text_color: 1, 1, 1, 1
+                font_style: "H4"
+                bold: True
+                halign: "center"
+
+            MDLabel:
+                id: update_desc
+                text: ""
+                theme_text_color: "Custom"
+                text_color: 0.8, 0.9, 1, 1
+                font_size: "14sp"
+                halign: "center"
+                size_hint_y: None
+                height: dp(60)
+
+            Widget:
+
+            MDRaisedButton:
+                text: "Télécharger"
+                md_bg_color: 0.13, 0.61, 0.55, 1
+                size_hint_y: None
+                height: dp(50)
+                on_release: root.do_update()
+
+            MDRaisedButton:
+                id: later_btn
+                text: "Plus tard"
+                md_bg_color: 0.5, 0.5, 0.5, 1
+                size_hint_y: None
+                height: dp(50)
+                on_release: root.do_later()
+
+            MDFlatButton:
+                id: quit_btn
+                text: "Fermer l'application"
+                theme_text_color: "Custom"
+                text_color: 0.8, 0.8, 0.8, 1
+                size_hint_y: None
+                height: dp(40)
+                on_release: root.do_quit()
+
+            Widget:
                         
                         MDRaisedButton:
                             id: add_review_btn
@@ -2466,6 +2533,8 @@ RootManager:
         name: "history"
     LoadingScreen:
         name: "loading"
+    UpdateScreen:
+        name: "update"
 
 <LoadingScreen>:
     MDScreen:

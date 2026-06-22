@@ -44,6 +44,18 @@ def init_db() -> None:
     pass
 
 
+def check_version() -> dict:
+    resp = _get("/api/app-version")
+    if isinstance(resp, dict) and resp.get("ok"):
+        return {
+            "latest_version": resp.get("latest_version", ""),
+            "min_version": resp.get("min_version", ""),
+            "download_url": resp.get("download_url", ""),
+            "update_message": resp.get("update_message", ""),
+        }
+    return {}
+
+
 # ============ AUTH ============
 def create_user(full_name: str, email: str, password: str, role: str) -> Tuple[bool, str]:
     resp = _post("/api/auth/register", {"full_name": full_name, "email": email, "password": password, "role": role})

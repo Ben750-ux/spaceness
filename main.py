@@ -26,6 +26,51 @@ from kivymd.uix.textfield import MDTextField
 
 import api_client as db
 
+APP_VERSION = "1.0.0"
+
+
+def _parse_version(v: str) -> tuple:
+    try:
+        return tuple(int(x) for x in v.split("."))
+    except Exception:
+        return (0, 0, 0)
+
+
+class UpdateScreen(Screen):
+    message = StringProperty("")
+    download_url = StringProperty("")
+    is_force_update = BooleanProperty(False)
+
+    def on_pre_enter(self):
+        if self.is_force_update:
+            self.ids.update_title.text = "Mise à jour requise"
+            self.ids.update_desc.text = self.message or "Une version plus récente est requise pour continuer."
+            self.ids.later_btn.opacity = 0
+            self.ids.later_btn.disabled = True
+            self.ids.quit_btn.opacity = 1
+            self.ids.quit_btn.disabled = False
+        else:
+            self.ids.update_title.text = "Nouvelle version disponible"
+            self.ids.update_desc.text = self.message or "Une mise à jour est disponible."
+            self.ids.later_btn.opacity = 1
+            self.ids.later_btn.disabled = False
+            self.ids.quit_btn.opacity = 0
+            self.ids.quit_btn.disabled = True
+
+    def do_update(self):
+        if self.download_url:
+            import webbrowser
+            webbrowser.open(self.download_url)
+        else:
+            self.ids.update_desc.text = "Aucune URL de téléchargement configurée. Contactez le support."
+
+    def do_later(self):
+        app = App.get_running_app()
+        app.root.current = "login"
+
+    def do_quit(self):
+        App.get_running_app().stop()
+
 
 class LoginScreen(Screen):
     message = StringProperty("")
@@ -1491,6 +1536,25 @@ class ShopMobileApp(MDApp):
             block_msg = settings.get("block_message", "L'application est actuellement en maintenance.")
             self._show_blocked_dialog(block_msg)
             return
+        version_info = db.check_version()
+        if version_info:
+            current = _parse_version(APP_VERSION)
+            min_v = _parse_version(version_info.get("min_version", "0.0.0"))
+            latest_v = _parse_version(version_info.get("latest_version", "0.0.0"))
+            if min_v > current:
+                update_screen = self.root.get_screen("update")
+                update_screen.message = version_info.get("update_message", "Une version plus récente est requise pour continuer. Veuillez télécharger la mise à jour.")
+                update_screen.download_url = version_info.get("download_url", "")
+                update_screen.is_force_update = True
+                self.root.current = "update"
+                return
+            if latest_v > current:
+                update_screen = self.root.get_screen("update")
+                update_screen.message = version_info.get("update_message", "Une nouvelle version est disponible. Téléchargez-la pour profiter des dernières fonctionnalités.")
+                update_screen.download_url = version_info.get("download_url", "")
+                update_screen.is_force_update = False
+                self.root.current = "update"
+                return
         if self.current_user:
             self.route_after_login()
         else:
