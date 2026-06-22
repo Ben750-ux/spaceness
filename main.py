@@ -634,8 +634,8 @@ class ShopScreen(Screen):
         details_dict = dict(details)
         self.ids.shop_profile_name.text = details_dict["shop_name"]
         self.ids.shop_name_header.text = details_dict["shop_name"]
-        self.ids.shop_logo.source = details_dict.get("logo_url") or "https://picsum.photos/seed/logo/200/200"
-        self.ids.shop_banner.source = details_dict.get("banner_url") or "https://picsum.photos/seed/banner/800/300"
+        self.ids.shop_logo.source = details_dict.get("logo_url") or "img/placeholder_logo.png"
+        self.ids.shop_banner.source = details_dict.get("banner_url") or "img/placeholder_banner.png"
         self.ids.shop_desc.text = details_dict["description"] or "-"
         
         subscriber_count = db.get_shop_subscriber_count(shop_id)
@@ -724,7 +724,7 @@ class ProductDetailsScreen(Screen):
         img2 = row["image_url_2"] if "image_url_2" in row.keys() else ""
         img3 = row["image_url_3"] if "image_url_3" in row.keys() else ""
         
-        default_img = "https://picsum.photos/seed/defaultdetail/700/500"
+        default_img = "img/placeholder_product.png"
         
         self.ids.d_image.source = img1 if img1 else default_img
         self.ids.d_image.opacity = 1 if img1 else 0
@@ -877,7 +877,7 @@ class CartScreen(Screen):
                 elevation=2,
                 md_bg_color=(1, 1, 1, 1),
             )
-            img_src = item.get("image_url") or "https://picsum.photos/seed/cart/400/300"
+            img_src = item.get("image_url") or "img/placeholder_product.png"
             card.add_widget(
                 FitImage(
                     source=img_src,
@@ -995,7 +995,7 @@ class OrdersScreen(Screen):
                 elevation=2,
                 md_bg_color=(1, 1, 1, 1),
             )
-            img_src = row["product_image_url"] or "https://picsum.photos/seed/order/400/300"
+            img_src = row["product_image_url"] or "img/placeholder_product.png"
             card.add_widget(
                 FitImage(
                     source=img_src,

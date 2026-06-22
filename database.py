@@ -308,16 +308,16 @@ def _seed_demo_data(conn: sqlite3.Connection) -> None:
             "tech@shop.local",
             "Boutique d'accessoires tech premium.",
             "contact@techshop.local",
-            "https://picsum.photos/seed/techlogo/240/240",
-            "https://picsum.photos/seed/techbanner/1200/500",
+            "",
+            "",
         ),
         (
             "Maison Mode",
             "mode@shop.local",
             "Mode chic et elegante pour tous les styles.",
             "contact@maisonmode.local",
-            "https://picsum.photos/seed/modelogo/240/240",
-            "https://picsum.photos/seed/modebanner/1200/500",
+            "",
+            "",
         ),
     ]
     for shop_name, email, desc, contact, logo_url, banner_url in vendors:
@@ -346,7 +346,7 @@ def _seed_demo_data(conn: sqlite3.Connection) -> None:
                     29.99,
                     20,
                     "Son clair et autonomie elevee.",
-                    "https://picsum.photos/seed/ecouteurs/600/420",
+                    "",
                 ),
                 (
                     "Chargeur Rapide",
@@ -354,7 +354,7 @@ def _seed_demo_data(conn: sqlite3.Connection) -> None:
                     14.50,
                     30,
                     "Compatible USB-C.",
-                    "https://picsum.photos/seed/chargeur/600/420",
+                    "",
                 ),
             ]
         else:
@@ -365,7 +365,7 @@ def _seed_demo_data(conn: sqlite3.Connection) -> None:
                     18.00,
                     50,
                     "Confortable et durable.",
-                    "https://picsum.photos/seed/tshirt/600/420",
+                    "",
                 ),
                 (
                     "Jean Slim",
@@ -373,7 +373,7 @@ def _seed_demo_data(conn: sqlite3.Connection) -> None:
                     35.00,
                     25,
                     "Style moderne.",
-                    "https://picsum.photos/seed/jean/600/420",
+                    "",
                 ),
             ]
         for p in products:

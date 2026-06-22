@@ -23,7 +23,7 @@
         height: dp(110)
         
         FitImage:
-            source: root.image_url if root.image_url else "https://picsum.photos/seed/defaultproduct/600/420"
+            source: root.image_url if root.image_url else "img/placeholder_product.png"
             size_hint: 1, 1
             pos_hint: {"center_x": 0.5, "center_y": 0.5}
         
@@ -1239,7 +1239,7 @@
                         
                         FitImage:
                             id: shop_banner
-                            source: "https://picsum.photos/seed/banner/800/300"
+                            source: "img/placeholder_banner.png"
                             size_hint: 1, 1
                             allow_stretch: True
                         
@@ -1257,7 +1257,7 @@
                             
                             FitImage:
                                 id: shop_logo
-                                source: "https://picsum.photos/seed/logo/200/200"
+                                source: "img/placeholder_logo.png"
                                 size_hint: None, None
                                 size: dp(86), dp(86)
                                 pos_hint: {"center_x": 0.5, "center_y": 0.5}
