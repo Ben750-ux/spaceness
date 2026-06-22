@@ -707,7 +707,7 @@ class ShopScreen(Screen):
         details_dict = dict(details)
         self.ids.shop_profile_name.text = details_dict["shop_name"]
         self.ids.shop_name_header.text = details_dict["shop_name"]
-        self.ids.shop_logo.source = details_dict.get("logo_url") or "img/placeholder_logo.png"
+        self.ids.shop_logo.source = details_dict.get("logo_url") or "img/logo.png"
         self.ids.shop_banner.source = details_dict.get("banner_url") or "img/placeholder_banner.png"
         self.ids.shop_desc.text = details_dict["description"] or "-"
         
