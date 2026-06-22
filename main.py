@@ -419,8 +419,10 @@ class ForgotPasswordScreen(Screen):
             self.message = msg
             app.root.current = "forgot_password"
             return
+        code = msg
         app.pending_reset_email = email
-        app.pending_code = msg
+        app.pending_code = code
+        sent, err = mailer.send_verification_code(email, code)
         app.root.current = "reset_password"
 
 class ResetPasswordScreen(Screen):
