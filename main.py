@@ -372,17 +372,23 @@ Pour toute question, contactez-nous via l'Application.
         self.message = msg
         if not ok:
             return
-        # Creer le compte, envoyer le code de verification
+        app.loading_message = "Envoi du code de verification..."
+        app.root.current = "loading"
+        Clock.schedule_once(lambda dt: self._send_verification(app, email, password), 0.3)
+
+    def _send_verification(self, app, email, password):
         ok_login, msg_login, user = db.login_user(email, password)
         if not ok_login and msg_login == "VERIFICATION_REQUIRED":
             app.pending_user_id = user["id"]
             code = db.resend_verification_code(app.pending_user_id)
             if not code:
                 self.message = "Erreur lors de la generation du code de verification"
+                app.root.current = "signup_step6"
                 return
             sent, err = mailer.send_verification_code(email, code)
             if not sent:
                 self.message = f"Compte cree mais echec envoi email: {err}"
+                app.root.current = "signup_step6"
                 return
             app.pending_code = code
             app.signup_draft.clear()
@@ -390,6 +396,7 @@ Pour toute question, contactez-nous via l'Application.
             Clock.schedule_once(lambda dt: setattr(app, "pending_code", None), 120)
         else:
             self.message = "Erreur inattendue lors de la creation du compte."
+            app.root.current = "signup_step6"
 
 
 class VerificationScreen(Screen):
@@ -1356,9 +1363,11 @@ class RootManager(ScreenManager):
 
 
 class LoadingScreen(Screen):
-    def on_enter(self):
-        Clock.schedule_once(self.finish_loading, 2)
-    
+    def on_pre_enter(self):
+        app = App.get_running_app()
+        if app.loading_message == "Chargement...":
+            Clock.schedule_once(self.finish_loading, 2)
+
     def finish_loading(self, dt):
         app = App.get_running_app()
         app.finish_loading()
@@ -1380,6 +1389,7 @@ class ShopMobileApp(MDApp):
     admin_notification = BooleanProperty(False)
     pending_user_id: Optional[int] = None
     pending_code: Optional[str] = None
+    loading_message = StringProperty("Chargement...")
 
     def start_signup(self) -> None:
         self.signup_draft.clear()
@@ -1391,7 +1401,7 @@ class ShopMobileApp(MDApp):
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.accent_palette = "Amber"
         self.title = "Spaceness - Marketplace"
-        self.icon = "img/Fichier 3_102810.png"
+        self.icon = "img/placeholder_icon.png"
         root = Builder.load_file("app.kv")
         self._load_session()
         self.update_cart_badge()
