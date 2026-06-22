@@ -16,7 +16,7 @@ def _request(method: str, url: str, data: Any = None) -> Any:
     body = json.dumps(data).encode() if data else None
     req = Request(url, data=body, headers=headers, method=method)
     try:
-        with urlopen(req, timeout=10) as resp:
+        with urlopen(req, timeout=60) as resp:
             return json.loads(resp.read().decode())
     except Exception as e:
         return {"ok": False, "detail": str(e)}

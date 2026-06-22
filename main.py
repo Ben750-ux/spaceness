@@ -1400,6 +1400,14 @@ class ShopMobileApp(MDApp):
     def on_start(self) -> None:
         self.root.current = "loading"
     
+    def _retry_load_session(self, dt) -> None:
+        if not self.current_user and os.path.exists(self.session_file):
+            self._load_session()
+        if self.current_user:
+            self.route_after_login()
+        else:
+            self.root.current = "login"
+
     def finish_loading(self) -> None:
         settings = db.get_app_settings()
         if settings.get("is_blocked"):
@@ -1409,7 +1417,7 @@ class ShopMobileApp(MDApp):
         if self.current_user:
             self.route_after_login()
         else:
-            self.root.current = "login"
+            Clock.schedule_once(self._retry_load_session, 1)
     
     def _show_blocked_dialog(self, message: str) -> None:
         from kivymd.uix.dialog import MDDialog
@@ -1650,7 +1658,10 @@ class ShopMobileApp(MDApp):
             return
         if not user_id:
             return
-        user = db.get_user_by_id(user_id)
+        try:
+            user = db.get_user_by_id(user_id)
+        except Exception:
+            return
         if not user:
             self._clear_session()
             return
