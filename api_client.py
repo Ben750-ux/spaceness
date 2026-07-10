@@ -1,8 +1,10 @@
 import json
 import os
+import mimetypes
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.request import Request, urlopen
 from urllib.parse import urlencode
+from uuid import uuid4
 
 API_URL = os.environ.get("API_URL", "https://spaceness.onrender.com")
 
@@ -139,6 +141,33 @@ def update_shop(owner_user_id: int, shop_name: str, description: str = "", conta
     if resp.get("ok"):
         return True, resp.get("message", "Boutique mise a jour.")
     return False, resp.get("detail", "Erreur.")
+
+
+# ============ UPLOAD ============
+def upload_image(filepath: str) -> Optional[str]:
+    from urllib.error import HTTPError
+    if not os.path.exists(filepath):
+        return None
+    boundary = uuid4().hex
+    filename = os.path.basename(filepath)
+    mime = mimetypes.guess_type(filepath)[0] or "application/octet-stream"
+    with open(filepath, "rb") as f:
+        data = f.read()
+    body = (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'
+        f"Content-Type: {mime}\r\n\r\n"
+    ).encode() + data + f"\r\n--{boundary}--\r\n".encode()
+    headers = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
+    req = Request(f"{API_URL}/api/upload", data=body, headers=headers, method="POST")
+    try:
+        with urlopen(req, timeout=120) as resp:
+            result = json.loads(resp.read().decode())
+            if result.get("ok"):
+                return result["url"]
+    except HTTPError:
+        pass
+    return None
 
 
 # ============ PRODUITS ============

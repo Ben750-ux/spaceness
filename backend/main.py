@@ -1,12 +1,22 @@
+import asyncio
+import os
+import uuid
+import shutil
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from config import settings
 import crud as db
 from models import init_db
+
+UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR.mkdir(exist_ok=True)
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}
 
 
 @asynccontextmanager
@@ -26,6 +36,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 
 # ============ MODELS ============
@@ -136,6 +148,10 @@ class OrderStatusRequest(BaseModel):
     status: str
 
 
+class StatusUpdateRequest(BaseModel):
+    status: str
+
+
 class BlockUserRequest(BaseModel):
     user_id: int
     blocked: int
@@ -148,6 +164,74 @@ class ReplyMessageRequest(BaseModel):
 
 class MarkReadRequest(BaseModel):
     message_id: int
+
+
+class AppSettingsRequest(BaseModel):
+    is_blocked: int
+    block_message: str = ""
+
+
+class ShopCredentialsRequest(BaseModel):
+    owner_name: str = ""
+    password: str = ""
+
+
+class ShopInfoRequest(BaseModel):
+    shop_name: str = ""
+    description: str = ""
+    contact_info: str = ""
+
+
+class MessageToShopRequest(BaseModel):
+    subject: str
+    message: str
+
+
+class VendorMessageReplyRequest(BaseModel):
+    reply: str
+
+
+class VendorLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class VendorShopUpdateRequest(BaseModel):
+    shop_name: str = ""
+    description: str = ""
+    contact_info: str = ""
+    logo_url: str = ""
+    banner_url: str = ""
+
+
+class VendorProductAddRequest(BaseModel):
+    name: str
+    category: str = "General"
+    price: float
+    stock: int
+    description: str = ""
+    image_url: str = ""
+
+
+class VendorProductUpdateRequest(BaseModel):
+    stock: int
+    is_active: int = 1
+
+
+class VendorOrderStatusRequest(BaseModel):
+    status: str
+
+
+class VendorMessageRequest(BaseModel):
+    subject: str
+    message: str
+
+
+class ShopCreateRequest(BaseModel):
+    owner_user_id: int
+    shop_name: str
+    description: str = ""
+    contact_info: str = ""
 
 
 # ============ AUTH ============
@@ -232,6 +316,20 @@ async def get_app_version():
     }
 
 
+# ============ UPLOAD ============
+@app.post("/api/upload")
+async def upload_image(file: UploadFile = File(...)):
+    ext = Path(file.filename).suffix.lower() if file.filename else ".jpg"
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"Format non autorise: {ext}. Utilisez jpg, png, gif, webp, bmp.")
+    filename = f"{uuid.uuid4().hex}{ext}"
+    filepath = UPLOAD_DIR / filename
+    with open(filepath, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+    url = f"/uploads/{filename}"
+    return {"ok": True, "url": url, "filename": filename}
+
+
 # ============ PRODUITS ============
 @app.get("/api/products")
 async def list_products(search: str = "", category: str = ""):
@@ -281,6 +379,14 @@ async def get_shop(shop_id: int):
     if not shop:
         raise HTTPException(status_code=404, detail="Boutique introuvable")
     return {"ok": True, "shop": shop}
+
+
+@app.post("/api/shops/create")
+async def create_shop(req: ShopCreateRequest):
+    ok, msg = await db.create_shop(req.owner_user_id, req.shop_name, req.description, req.contact_info)
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"ok": True, "message": msg}
 
 
 @app.post("/api/shops/update")
@@ -451,6 +557,236 @@ async def get_all_shops():
     return {"ok": True, "shops": shops}
 
 
+@app.delete("/api/admin/products/{product_id}")
+async def admin_delete_product(product_id: int):
+    ok = await db.delete_product(product_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Erreur suppression produit")
+    return {"ok": True}
+
+
+@app.delete("/api/admin/shops/{shop_id}")
+async def admin_delete_shop(shop_id: int):
+    ok = await db.delete_shop(shop_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Erreur suppression boutique")
+    return {"ok": True}
+
+
+@app.get("/api/admin/shops/{shop_id}/details")
+async def admin_get_shop_details(shop_id: int):
+    shop = await db.get_shop_with_owner(shop_id)
+    if not shop:
+        raise HTTPException(status_code=404, detail="Boutique introuvable")
+    return {"ok": True, "shop": shop}
+
+
+@app.put("/api/admin/shops/{shop_id}/credentials")
+async def admin_update_shop_credentials(shop_id: int, req: ShopCredentialsRequest):
+    ok, msg = await db.update_shop_credentials(shop_id, req.owner_name, req.password)
+    return {"ok": ok, "message": msg}
+
+
+@app.put("/api/admin/shops/{shop_id}/info")
+async def admin_update_shop_info(shop_id: int, req: ShopInfoRequest):
+    ok, msg = await db.update_shop_info(shop_id, req.shop_name, req.description, req.contact_info)
+    return {"ok": ok, "message": msg}
+
+
+@app.get("/api/admin/vendor-messages")
+async def admin_get_all_vendor_messages():
+    messages = await db.get_all_vendor_admin_messages()
+    return {"ok": True, "messages": messages}
+
+
+@app.post("/api/admin/vendor-messages/{message_id}/reply")
+async def admin_reply_vendor_message(message_id: int, req: VendorMessageReplyRequest):
+    ok = await db.reply_vendor_message(message_id, req.reply)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Erreur reponse")
+    return {"ok": True}
+
+
+@app.post("/api/admin/shops/{shop_id}/message")
+async def admin_send_message_to_shop(shop_id: int, req: MessageToShopRequest):
+    ok = await db.send_message_to_shop(shop_id, req.subject, req.message)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Erreur envoi message")
+    return {"ok": True}
+
+
+@app.get("/api/admin/activity-log")
+async def admin_get_activity_log(limit: int = 100):
+    logs = await db.get_activity_log(limit)
+    return {"ok": True, "logs": logs}
+
+
+@app.get("/api/admin/stats/advanced")
+async def admin_get_advanced_stats(days: int = 30):
+    daily_orders, popular_products, monthly_stats = await asyncio.gather(
+        db.get_daily_orders_stats(days),
+        db.get_popular_products(10),
+        db.get_monthly_stats(),
+    )
+    return {
+        "ok": True,
+        "daily_orders": [dict(d) for d in daily_orders],
+        "popular_products": [dict(p) for p in popular_products],
+        "monthly_stats": [dict(m) for m in monthly_stats],
+    }
+
+
+@app.get("/api/admin/conversations/clients")
+async def admin_get_client_conversations():
+    conversations = await db.get_client_conversations()
+    return {"ok": True, "conversations": conversations}
+
+
+@app.get("/api/admin/conversations/clients/{user_id}")
+async def admin_get_client_conversation(user_id: int):
+    messages = await db.get_user_messages(user_id)
+    return {"ok": True, "messages": messages}
+
+
+@app.get("/api/admin/conversations/shops")
+async def admin_get_shop_conversations():
+    conversations = await db.get_shop_conversations()
+    return {"ok": True, "conversations": conversations}
+
+
+@app.get("/api/admin/conversations/shops/{shop_id}")
+async def admin_get_shop_conversation(shop_id: int):
+    messages = await db.get_vendor_messages(shop_id)
+    return {"ok": True, "messages": messages}
+
+
+@app.get("/api/admin/shops/list-all")
+async def admin_list_all_shops():
+    shops = await db.list_all_shops()
+    return {"ok": True, "shops": shops}
+
+
+# ============ VENDOR API ============
+@app.post("/api/vendor/login")
+async def vendor_login(req: VendorLoginRequest):
+    ok, msg, vendor = await db.login_vendor(req.email, req.password)
+    if not ok:
+        raise HTTPException(status_code=401, detail=msg)
+    return {"ok": True, "vendor": vendor}
+
+
+@app.get("/api/vendor/stats")
+async def vendor_get_stats(shop_id: int):
+    products, orders, revenue, subscribers = await asyncio.gather(
+        db.count_shop_products(shop_id),
+        db.count_shop_orders(shop_id),
+        db.get_shop_revenue(shop_id),
+        db.get_shop_subscriber_count(shop_id),
+    )
+    return {
+        "ok": True,
+        "total_products": products,
+        "total_orders": orders,
+        "total_revenue": revenue,
+        "total_subscribers": subscribers,
+    }
+
+
+@app.get("/api/vendor/stats/monthly")
+async def vendor_get_monthly_stats(shop_id: int):
+    stats = await db.get_shop_monthly_stats(shop_id)
+    return {"ok": True, "stats": [dict(s) for s in stats]}
+
+
+@app.get("/api/vendor/shop")
+async def vendor_get_shop(owner_user_id: int):
+    shop = await db.get_shop_by_owner(owner_user_id)
+    if not shop:
+        raise HTTPException(status_code=404, detail="Boutique introuvable")
+    return {"ok": True, "shop": shop}
+
+
+@app.put("/api/vendor/shop")
+async def vendor_update_shop(owner_user_id: int, req: VendorShopUpdateRequest):
+    shop = await db.get_shop_by_owner(owner_user_id)
+    if not shop:
+        raise HTTPException(status_code=404, detail="Boutique introuvable")
+    ok, msg = await db.update_shop(owner_user_id, req.shop_name, req.description, req.contact_info, req.logo_url, req.banner_url)
+    return {"ok": ok, "message": msg}
+
+
+@app.get("/api/vendor/products")
+async def vendor_get_products(shop_id: int):
+    products = await db.list_shop_products(shop_id)
+    return {"ok": True, "products": products}
+
+
+@app.post("/api/vendor/products")
+async def vendor_add_product(owner_user_id: int, req: VendorProductAddRequest):
+    ok, msg = await db.add_product(owner_user_id, req.name, req.category, req.price, req.stock, req.description, req.image_url)
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"ok": True, "message": msg}
+
+
+@app.put("/api/vendor/products/{product_id}")
+async def vendor_update_product(product_id: int, owner_user_id: int, req: VendorProductUpdateRequest):
+    ok, msg = await db.update_product_stock(product_id, owner_user_id, req.stock, req.is_active)
+    return {"ok": ok, "message": msg}
+
+
+@app.delete("/api/vendor/products/{product_id}")
+async def vendor_delete_product(product_id: int, owner_user_id: int):
+    ok, msg = await db.delete_product_by_owner(product_id, owner_user_id)
+    return {"ok": ok, "message": msg}
+
+
+@app.get("/api/vendor/orders")
+async def vendor_get_orders(shop_id: int):
+    orders = await db.list_shop_orders_anonymous(shop_id)
+    return {"ok": True, "orders": orders}
+
+
+@app.put("/api/vendor/orders/{order_id}/status")
+async def vendor_update_order_status(order_id: int, shop_id: int, req: VendorOrderStatusRequest):
+    ok = await db.update_order_status_if_shop(order_id, shop_id, req.status)
+    return {"ok": ok}
+
+
+@app.get("/api/vendor/messages")
+async def vendor_get_messages(shop_id: int):
+    messages = await db.get_vendor_messages(shop_id)
+    return {"ok": True, "messages": messages}
+
+
+@app.post("/api/vendor/messages")
+async def vendor_send_message(shop_id: int, req: VendorMessageRequest):
+    ok = await db.send_vendor_message(shop_id, req.subject, req.message)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Erreur envoi message")
+    return {"ok": True}
+
+
+@app.put("/api/admin/orders/{order_id}/status")
+async def admin_update_order_status(order_id: int, req: StatusUpdateRequest):
+    ok = await db.update_order_status(order_id, req.status)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Erreur mise a jour statut")
+    return {"ok": True}
+
+
+@app.get("/api/admin/users/{user_id}/orders")
+async def admin_get_user_orders(user_id: int):
+    orders = await db.get_user_orders(user_id)
+    return {"ok": True, "orders": orders}
+
+
+@app.get("/api/admin/users/{user_id}/subscriptions")
+async def admin_get_user_subscriptions(user_id: int):
+    subs = await db.get_user_subscriptions(user_id)
+    return {"ok": True, "subscriptions": subs}
+
+
 # ============ MESSAGES ============
 @app.post("/api/messages/send")
 async def send_message(req: MessageRequest):
@@ -502,8 +838,8 @@ async def get_app_settings():
 
 
 @app.post("/api/app-settings")
-async def set_app_settings(is_blocked: bool, block_message: str = ""):
-    ok = await db.set_app_blocked(is_blocked, block_message)
+async def set_app_settings(req: AppSettingsRequest):
+    ok = await db.set_app_blocked(req.is_blocked, req.block_message)
     if not ok:
         raise HTTPException(status_code=400, detail="Erreur")
     return {"ok": True}

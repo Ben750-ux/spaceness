@@ -1,6 +1,7 @@
 import json
 import os
 import unicodedata
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import mailer
@@ -12,7 +13,9 @@ from kivy.lang import Builder
 from kivy.properties import BooleanProperty, DictProperty, NumericProperty, StringProperty
 from kivy.metrics import dp
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.filechooser import FileChooserListView
 from kivy.uix.label import Label
+from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.screenmanager import Screen, ScreenManager
 from kivy.uix.widget import Widget
@@ -23,6 +26,17 @@ from kivymd.uix.card import MDCard
 from kivymd.uix.fitimage import FitImage
 from kivymd.uix.label import MDLabel, MDIcon
 from kivymd.uix.textfield import MDTextField
+
+
+def _safe_img(url: str) -> str:
+    if not url:
+        return "img/placeholder_product.png"
+    if url.startswith("/uploads/"):
+        api_url = os.environ.get("API_URL", "https://spaceness.onrender.com")
+        return f"{api_url}{url}"
+    if url.startswith("http://") or url.startswith("https://"):
+        return "img/placeholder_product.png"
+    return url
 
 import api_client as db
 
@@ -610,7 +624,7 @@ class MarketScreen(Screen):
                 subtitle=f"{row['shop_name']}",
                 description=row["description"] or "-",
                 price=f"{row['price']:.2f} cr",
-                image_url=row["image_url"] or "",
+                image_url=_safe_img(row["image_url"]),
                 stock_text=f"Stock: {row['stock']}",
                 is_favorite=is_fav,
             )
@@ -674,7 +688,7 @@ class SearchScreen(Screen):
                 subtitle=f"{row['shop_name']}",
                 description=row["description"] or "-",
                 price=f"{row['price']:.2f} cr",
-                image_url=row["image_url"] or "",
+                image_url=_safe_img(row["image_url"]),
                 stock_text=f"Stock: {row['stock']}",
                 is_favorite=is_fav,
             )
@@ -820,7 +834,7 @@ class ShopScreen(Screen):
                 subtitle=f"Stock: {row['stock']} | {'Actif' if row['is_active'] else 'Inactif'}",
                 description=row["description"] or "-",
                 price=f"{row['price']:.2f} credits",
-                image_url=row["image_url"] or "",
+                image_url=_safe_img(row["image_url"]),
                 stock_text=f"Stock: {row['stock']}",
                 show_shop_link=False,
             )
@@ -838,28 +852,20 @@ class ProductDetailsScreen(Screen):
             return
         self.product_id = row["id"]
         
-        img1 = row["image_url"] or ""
-        img2 = row["image_url_2"] if "image_url_2" in row.keys() else ""
-        img3 = row["image_url_3"] if "image_url_3" in row.keys() else ""
-        
         default_img = "img/placeholder_product.png"
         
-        self.ids.d_image.source = img1 if img1 else default_img
-        self.ids.d_image.opacity = 1 if img1 else 0
+        img1 = _safe_img(row.get("image_url", ""))
+        img2 = _safe_img(row.get("image_url_2", ""))
+        img3 = _safe_img(row.get("image_url_3", ""))
         
-        if img2:
-            self.ids.d_image_2.source = img2
-            self.ids.d_image_2.opacity = 1
-        else:
-            self.ids.d_image_2.source = default_img
-            self.ids.d_image_2.opacity = 0
+        self.ids.d_image.source = img1
+        self.ids.d_image.opacity = 1 if img1 != default_img else 0
         
-        if img3:
-            self.ids.d_image_3.source = img3
-            self.ids.d_image_3.opacity = 1
-        else:
-            self.ids.d_image_3.source = default_img
-            self.ids.d_image_3.opacity = 0
+        self.ids.d_image_2.source = img2
+        self.ids.d_image_2.opacity = 1 if img2 != default_img else 0
+        
+        self.ids.d_image_3.source = img3
+        self.ids.d_image_3.opacity = 1 if img3 != default_img else 0
         
         self.ids.d_title.text = row["name"]
         self.ids.d_shop.text = f"Boutique: {row['shop_name']}"
@@ -995,7 +1001,7 @@ class CartScreen(Screen):
                 elevation=2,
                 md_bg_color=(1, 1, 1, 1),
             )
-            img_src = item.get("image_url") or "img/placeholder_product.png"
+            img_src = _safe_img(item.get("image_url", ""))
             card.add_widget(
                 FitImage(
                     source=img_src,
@@ -1113,7 +1119,7 @@ class OrdersScreen(Screen):
                 elevation=2,
                 md_bg_color=(1, 1, 1, 1),
             )
-            img_src = row["product_image_url"] or "img/placeholder_product.png"
+            img_src = _safe_img(row.get("product_image_url", ""))
             card.add_widget(
                 FitImage(
                     source=img_src,
@@ -1407,7 +1413,7 @@ class FavoritesScreen(Screen):
                 title=row["name"],
                 subtitle=row["shop_name"],
                 price=f"{row['price']:.2f} cr",
-                image_url=row["image_url"] or "",
+                image_url=_safe_img(row["image_url"]),
                 stock_text=f"Stock: {row['stock']}",
                 is_favorite=True,
             )
@@ -1453,7 +1459,7 @@ class HistoryScreen(Screen):
                 title=row["name"],
                 subtitle=row["shop_name"],
                 price=f"{row['price']:.2f} cr",
-                image_url=row["image_url"] or "",
+                image_url=_safe_img(row["image_url"]),
                 stock_text=f"Stock: {row['stock']}",
                 is_favorite=is_fav,
             )
@@ -1515,7 +1521,8 @@ class ShopMobileApp(MDApp):
         self.title = "Spaceness - Marketplace"
         self.icon = "img/logo.png"
         root = Builder.load_file("app.kv")
-        self._load_session()
+        self.session_file = os.path.join(self.user_data_dir, "session.json")
+        self._session_user_id = self._read_session_file()
         self.update_cart_badge()
         return root
     
@@ -1523,12 +1530,10 @@ class ShopMobileApp(MDApp):
         self.root.current = "loading"
     
     def _retry_load_session(self, dt) -> None:
-        if not self.current_user and os.path.exists(self.session_file):
-            self._load_session()
-        if self.current_user:
-            self.route_after_login()
-        else:
+        if not self._verify_session():
             self.root.current = "login"
+        else:
+            self.route_after_login()
 
     def finish_loading(self) -> None:
         settings = db.get_app_settings()
@@ -1555,7 +1560,7 @@ class ShopMobileApp(MDApp):
                 update_screen.is_force_update = False
                 self.root.current = "update"
                 return
-        if self.current_user:
+        if self._verify_session():
             self.route_after_login()
         else:
             Clock.schedule_once(self._retry_load_session, 1)
@@ -1778,41 +1783,109 @@ class ShopMobileApp(MDApp):
     def open_cart(self) -> None:
         self.root.current = "cart"
 
+    def pick_and_upload_image(self, callback) -> None:
+        content = BoxLayout(orientation="vertical", spacing=dp(10), padding=dp(10))
+        filechooser = FileChooserListView(
+            path=os.path.expanduser("~"),
+            filters=["*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.bmp"],
+        )
+        content.add_widget(filechooser)
+
+        def on_select(instance):
+            selection = filechooser.selection
+            if not selection:
+                return
+            filepath = selection[0]
+            popup.dismiss()
+            Clock.schedule_once(lambda dt: self._do_upload(filepath, callback))
+
+        btn_layout = BoxLayout(size_hint_y=None, height=dp(50), spacing=dp(10))
+        btn_layout.add_widget(MDRaisedButton(text="Choisir", on_release=on_select))
+        content.add_widget(btn_layout)
+
+        popup = Popup(
+            title="Choisir une image",
+            content=content,
+            size_hint=(0.9, 0.9),
+        )
+        popup.open()
+
+    def _do_upload(self, filepath: str, callback) -> None:
+        url = db.upload_image(filepath)
+        if url:
+            callback(url)
+            self._show_toast(f"Image uploadée: {url}")
+        else:
+            self._show_toast("Erreur lors de l'upload")
+
+    def _show_toast(self, msg: str) -> None:
+        dlg = MDDialog(
+            title="Upload",
+            text=msg,
+            buttons=[MDRaisedButton(text="OK", on_release=lambda *_: dlg.dismiss())],
+        )
+        dlg.open()
+
     def open_orders(self) -> None:
         self.root.current = "orders"
 
     def _save_session(self) -> None:
         if not self.current_user:
             return
-        payload = {"user_id": self.current_user["id"]}
+        payload = {
+            "user_id": self.current_user["id"],
+            "user": self.current_user,
+            "saved_at": datetime.now().isoformat(),
+        }
         with open(self.session_file, "w", encoding="utf-8") as f:
             json.dump(payload, f)
 
-    def _load_session(self) -> None:
+    def _read_session_file(self) -> int:
         if not os.path.exists(self.session_file):
-            return
+            return 0
         try:
             with open(self.session_file, "r", encoding="utf-8") as f:
                 payload = json.load(f)
-            user_id = int(payload.get("user_id", 0))
+            return int(payload.get("user_id", 0))
         except Exception:
-            return
+            return 0
+
+    def _verify_session(self) -> bool:
+        user_id = getattr(self, "_session_user_id", 0)
         if not user_id:
-            return
+            return False
+        user = None
+        from_api = True
         try:
             user = db.get_user_by_id(user_id)
         except Exception:
-            return
+            user = None
+        if not user:
+            user = self._read_cached_user()
+            from_api = False
         if not user:
             self._clear_session()
-            return
-        if user["role"] != "client":
+            return False
+        if user.get("role") != "client":
             self._clear_session()
-            return
+            return False
+        if not from_api and user.get("is_verified") is None:
+            user["is_verified"] = True
         if not user.get("is_verified"):
             self._clear_session()
-            return
+            return False
         self.current_user = user
+        return True
+
+    def _read_cached_user(self) -> Optional[Dict[str, Any]]:
+        if not os.path.exists(self.session_file):
+            return None
+        try:
+            with open(self.session_file, "r", encoding="utf-8") as f:
+                payload = json.load(f)
+            return payload.get("user")
+        except Exception:
+            return None
 
     def _clear_session(self) -> None:
         if os.path.exists(self.session_file):

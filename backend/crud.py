@@ -9,7 +9,7 @@ from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import (
-    AdminMessage, AppSetting, Favorite, LoginAttempt, Order, Product,
+    ActivityLog, AdminMessage, AppSetting, Favorite, LoginAttempt, Order, Product,
     ProductReview, Shop, ShopSubscription, User, UserRole, ViewHistory,
     VendorAdminMessage, async_session,
 )
@@ -104,6 +104,7 @@ async def login_user(email: str, password: str) -> Tuple[bool, str, Optional[Dic
             "full_name": row.full_name,
             "email": row.email,
             "role": row.role.value,
+            "is_verified": bool(row.is_verified),
         }
 
 
@@ -1131,6 +1132,279 @@ async def get_user_subscriptions(user_id: int) -> List[Dict[str, Any]]:
         result = await session.execute(query)
         rows = result.scalars().all()
         return [{c.name: getattr(r, c.name) for c in Shop.__table__.columns} for r in rows]
+
+
+# ============ SHOP DETAILS WITH OWNER ============
+async def get_shop_with_owner(shop_id: int) -> Optional[Dict[str, Any]]:
+    async with async_session() as session:
+        query = (
+            select(Shop, User.full_name.label("owner_name"), User.email.label("owner_email"))
+            .join(User, Shop.owner_user_id == User.id)
+            .where(Shop.id == shop_id)
+        )
+        result = await session.execute(query)
+        row = result.one_or_none()
+        if not row:
+            return None
+        d = {c.name: getattr(row.Shop, c.name) for c in Shop.__table__.columns}
+        d["owner_name"] = row.owner_name
+        d["owner_email"] = row.owner_email
+        return d
+
+
+async def update_shop_credentials(shop_id: int, owner_name: str = "", password: str = "") -> Tuple[bool, str]:
+    try:
+        async with async_session() as session:
+            result = await session.execute(select(Shop).where(Shop.id == shop_id))
+            shop = result.scalar_one_or_none()
+            if not shop:
+                return False, "Boutique introuvable"
+            user_result = await session.execute(select(User).where(User.id == shop.owner_user_id))
+            user = user_result.scalar_one_or_none()
+            if not user:
+                return False, "Proprietaire introuvable"
+            if owner_name:
+                user.full_name = owner_name
+            if password and len(password) >= 8:
+                salt, pwd_hash = _hash_password(password)
+                user.password_salt = salt
+                user.password_hash = pwd_hash
+            await session.commit()
+        return True, "Identifiants mis a jour"
+    except Exception as e:
+        return False, str(e)
+
+
+async def update_shop_info(shop_id: int, shop_name: str = "", description: str = "", contact_info: str = "") -> Tuple[bool, str]:
+    try:
+        async with async_session() as session:
+            result = await session.execute(select(Shop).where(Shop.id == shop_id))
+            shop = result.scalar_one_or_none()
+            if not shop:
+                return False, "Boutique introuvable"
+            if shop_name:
+                shop.shop_name = shop_name
+            if description is not None:
+                shop.description = description
+            if contact_info is not None:
+                shop.contact_info = contact_info
+            await session.commit()
+        return True, "Informations mises a jour"
+    except Exception as e:
+        return False, str(e)
+
+
+# ============ ACTIVITY LOG ============
+async def get_activity_log(limit: int = 100) -> List[Dict[str, Any]]:
+    async with async_session() as session:
+        result = await session.execute(
+            select(ActivityLog)
+            .order_by(ActivityLog.created_at.desc())
+            .limit(limit)
+        )
+        rows = result.scalars().all()
+        return [{c.name: getattr(r, c.name) for c in ActivityLog.__table__.columns} for r in rows]
+
+
+async def log_activity(user_id: Any = None, user_name: str = "", action: str = "", details: str = "") -> bool:
+    try:
+        async with async_session() as session:
+            log = ActivityLog(
+                user_id=user_id, user_name=user_name,
+                action=action, details=details,
+            )
+            session.add(log)
+            await session.commit()
+        return True
+    except Exception:
+        return False
+
+
+# ============ ADVANCED STATS ============
+async def get_daily_orders_stats(days: int = 30) -> List[Dict[str, Any]]:
+    async with async_session() as session:
+        cutoff = _now() - timedelta(days=days)
+        query = (
+            select(
+                func.date(Order.created_at).label("date"),
+                func.count(Order.id).label("count"),
+                func.coalesce(func.sum(Order.total_amount), 0).label("revenue"),
+            )
+            .where(Order.created_at >= cutoff)
+            .group_by(func.date(Order.created_at))
+            .order_by(func.date(Order.created_at))
+        )
+        result = await session.execute(query)
+        return [dict(r._mapping) for r in result.all()]
+
+
+async def get_popular_products(limit: int = 10) -> List[Dict[str, Any]]:
+    async with async_session() as session:
+        query = (
+            select(
+                Product.id, Product.name, Product.price,
+                func.count(Order.id).label("order_count"),
+                func.coalesce(func.sum(Order.quantity), 0).label("total_sold"),
+            )
+            .outerjoin(Order, Product.id == Order.product_id)
+            .group_by(Product.id)
+            .order_by(func.count(Order.id).desc())
+            .limit(limit)
+        )
+        result = await session.execute(query)
+        return [dict(r._mapping) for r in result.all()]
+
+
+async def get_monthly_stats() -> List[Dict[str, Any]]:
+    async with async_session() as session:
+        query = (
+            select(
+                func.strftime("%Y-%m", Order.created_at).label("month"),
+                func.count(Order.id).label("order_count"),
+                func.coalesce(func.sum(Order.total_amount), 0).label("revenue"),
+            )
+            .group_by(func.strftime("%Y-%m", Order.created_at))
+            .order_by(func.strftime("%Y-%m", Order.created_at))
+        )
+        result = await session.execute(query)
+        return [dict(r._mapping) for r in result.all()]
+
+
+# ============ CONVERSATIONS ============
+async def get_client_conversations() -> List[Dict[str, Any]]:
+    async with async_session() as session:
+        subq = (
+            select(
+                AdminMessage.user_id,
+                func.max(AdminMessage.created_at).label("last_msg"),
+            )
+            .group_by(AdminMessage.user_id)
+            .subquery()
+        )
+        query = (
+            select(
+                AdminMessage, User.full_name, User.email,
+                subq.c.last_msg,
+            )
+            .join(subq, AdminMessage.user_id == subq.c.user_id)
+            .join(User, AdminMessage.user_id == User.id)
+            .where(AdminMessage.created_at == subq.c.last_msg)
+            .order_by(subq.c.last_msg.desc())
+        )
+        result = await session.execute(query)
+        rows = []
+        for r in result.all():
+            d = {c.name: getattr(r.AdminMessage, c.name) for c in AdminMessage.__table__.columns}
+            d["full_name"] = r.full_name
+            d["email"] = r.email
+            rows.append(d)
+        return rows
+
+
+async def get_shop_conversations() -> List[Dict[str, Any]]:
+    async with async_session() as session:
+        subq = (
+            select(
+                VendorAdminMessage.shop_id,
+                func.max(VendorAdminMessage.created_at).label("last_msg"),
+            )
+            .group_by(VendorAdminMessage.shop_id)
+            .subquery()
+        )
+        query = (
+            select(
+                VendorAdminMessage, Shop.shop_name,
+                subq.c.last_msg,
+            )
+            .join(subq, VendorAdminMessage.shop_id == subq.c.shop_id)
+            .join(Shop, VendorAdminMessage.shop_id == Shop.id)
+            .where(VendorAdminMessage.created_at == subq.c.last_msg)
+            .order_by(subq.c.last_msg.desc())
+        )
+        result = await session.execute(query)
+        rows = []
+        for r in result.all():
+            d = {c.name: getattr(r.VendorAdminMessage, c.name) for c in VendorAdminMessage.__table__.columns}
+            d["shop_name"] = r.shop_name
+            rows.append(d)
+        return rows
+
+
+async def get_shop_by_owner(owner_user_id: int) -> Optional[Dict[str, Any]]:
+    async with async_session() as session:
+        result = await session.execute(
+            select(Shop).where(Shop.owner_user_id == owner_user_id)
+        )
+        shop = result.scalar_one_or_none()
+        if not shop:
+            return None
+        return {c.name: getattr(shop, c.name) for c in Shop.__table__.columns}
+
+
+async def get_shop_subscriber_count(shop_id: int) -> int:
+    async with async_session() as session:
+        result = await session.execute(
+            select(func.count(ShopSubscription.id))
+            .where(ShopSubscription.shop_id == shop_id)
+        )
+        return result.scalar() or 0
+
+
+async def get_shop_monthly_stats(shop_id: int) -> List[Dict[str, Any]]:
+    async with async_session() as session:
+        query = (
+            select(
+                func.strftime("%Y-%m", Order.created_at).label("month"),
+                func.count(Order.id).label("order_count"),
+                func.coalesce(func.sum(Order.total_amount), 0).label("revenue"),
+            )
+            .join(Product, Order.product_id == Product.id)
+            .where(Product.shop_id == shop_id)
+            .group_by(func.strftime("%Y-%m", Order.created_at))
+            .order_by(func.strftime("%Y-%m", Order.created_at))
+        )
+        result = await session.execute(query)
+        return [dict(r._mapping) for r in result.all()]
+
+
+# ============ VENDOR AUTH ============
+async def login_vendor(email: str, password: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.email == email, User.role == UserRole.boutique)
+        )
+        user = result.scalar_one_or_none()
+        if not user:
+            ok, msg, user_data = await login_user(email, password)
+            if not ok:
+                return False, msg, None
+            return False, "Ce compte n'est pas une boutique", None
+        if not verify_password(password, user.password_salt, user.password_hash):
+            return False, "Mot de passe incorrect", None
+        shop = await get_shop_by_owner(user.id)
+        return True, "OK", {
+            "id": user.id,
+            "full_name": user.full_name,
+            "email": user.email,
+            "role": user.role.value,
+            "shop_id": shop["id"] if shop else None,
+            "shop_name": shop["shop_name"] if shop else None,
+        }
+
+
+async def create_shop(owner_user_id: int, shop_name: str, description: str = "", contact_info: str = "") -> Tuple[bool, str]:
+    try:
+        existing = await get_shop_by_owner(owner_user_id)
+        if existing:
+            return False, "Ce proprietaire a deja une boutique"
+        async with async_session() as session:
+            s = Shop(owner_user_id=owner_user_id, shop_name=shop_name,
+                     description=description, contact_info=contact_info)
+            session.add(s)
+            await session.commit()
+        return True, "Boutique creee"
+    except Exception:
+        return False, "Erreur creation boutique"
 
 
 async def seed_admin_and_demo():
