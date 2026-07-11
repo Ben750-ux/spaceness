@@ -1297,6 +1297,7 @@ class ContactAdminScreen(Screen):
                 db.mark_message_read(msg["id"])
         else:
             app.admin_notification = False
+        app._last_notif_count = 0
     
     def refresh_messages(self) -> None:
         app = App.get_running_app()
@@ -1534,6 +1535,7 @@ class ShopMobileApp(MDApp):
     _info_dialog: Optional[MDDialog] = None
     dark_mode = BooleanProperty(False)
     admin_notification = BooleanProperty(False)
+    _last_notif_count = 0
     pending_user_id: Optional[int] = None
     pending_code: Optional[str] = None
     pending_reset_email: Optional[str] = None
@@ -1625,14 +1627,30 @@ class ShopMobileApp(MDApp):
         dlg.open()
     
     def check_notifications(self) -> None:
-        """Vérifie les notifications admin pour afficher le badge"""
         if not self.current_user:
             self.admin_notification = False
             return
-        messages = db.get_user_messages(self.current_user["id"])
-        messages_dict = [dict(m) for m in messages]
-        unread_notifications = [m for m in messages_dict if (m["is_from_admin"] or m["admin_reply"]) and not m["is_read"]]
-        self.admin_notification = len(unread_notifications) > 0
+        db.api_async(db.get_user_messages, self._on_notif_result, self.current_user["id"])
+    
+    def _on_notif_result(self, messages) -> None:
+        Clock.schedule_once(lambda dt: self._process_notif_result(messages))
+    
+    def _process_notif_result(self, messages) -> None:
+        messages_dict = [dict(m) for m in messages] if messages else []
+        unread = [m for m in messages_dict if (m.get("is_from_admin") or m.get("admin_reply")) and not m.get("is_read")]
+        count = len(unread)
+        self.admin_notification = count > 0
+        if count > self._last_notif_count:
+            self._show_notif_popup(count - self._last_notif_count)
+        self._last_notif_count = count
+    
+    def _show_notif_popup(self, count: int) -> None:
+        msg = "nouveau message" if count == 1 else f"{count} nouveaux messages"
+        try:
+            from kivymd.uix.snackbar import Snackbar
+            Snackbar(text=f"📩 {msg} de l'administrateur", duration=4).open()
+        except Exception:
+            pass
     
     def toggle_dark_mode(self) -> None:
         """Bascule entre le mode sombre et clair"""

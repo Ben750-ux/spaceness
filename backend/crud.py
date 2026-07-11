@@ -887,7 +887,9 @@ async def mark_message_read(message_id: int) -> bool:
 async def count_unread_messages() -> int:
     async with async_session() as session:
         result = await session.execute(
-            select(func.count(AdminMessage.id)).where(AdminMessage.is_read == 0)
+            select(func.count(AdminMessage.id))
+            .where(AdminMessage.is_read == 0)
+            .where(AdminMessage.is_from_admin == 0)
         )
         return result.scalar() or 0
 
@@ -895,7 +897,9 @@ async def count_unread_messages() -> int:
 async def count_unread_vendor_messages() -> int:
     async with async_session() as session:
         result = await session.execute(
-            select(func.count(VendorAdminMessage.id)).where(VendorAdminMessage.is_read == 0)
+            select(func.count(VendorAdminMessage.id))
+            .where(VendorAdminMessage.is_read == 0)
+            .where(VendorAdminMessage.is_from_vendor == 1)
         )
         return result.scalar() or 0
 

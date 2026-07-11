@@ -1692,6 +1692,65 @@
                             font_size: "12sp"
                             padding: dp(4), 0
                         
+                    MDRaisedButton:
+                        id: add_review_btn
+                        text: "Laisser un avis"
+                        md_bg_color: 0.13, 0.59, 0.95, 1
+                        font_size: "11sp"
+                        size_hint_y: None
+                        height: dp(36)
+                        on_release: root.open_review_dialog()
+                    
+                    MDCard:
+                        orientation: "vertical"
+                        padding: dp(12)
+                        radius: [10, 10, 10, 10]
+                        size_hint_y: None
+                        height: self.minimum_height
+                        id: reviews_container
+                        
+                        MDLabel:
+                            id: no_reviews
+                            text: "Aucun avis pour le moment"
+                            theme_text_color: "Hint"
+                            font_size: "12sp"
+                            halign: "center"
+                            size_hint_y: None
+                            height: dp(40)
+                    
+                    Widget:
+                        size_hint_y: None
+                        height: dp(16)
+                    
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        spacing: dp(12)
+                        size_hint_y: None
+                        height: dp(48)
+                        MDTextField:
+                            id: d_qty
+                            hint_text: "Qte"
+                            text: "1"
+                            mode: "rectangle"
+                            input_filter: "int"
+                            size_hint_x: 0.3
+                            height: dp(48)
+                        MDRaisedButton:
+                            text: "Ajouter au panier"
+                            md_bg_color: 0.13, 0.61, 0.55, 1
+                            font_size: "14sp"
+                            on_release: root.request_add_to_cart()
+                    
+                    MDLabel:
+                        text: root.message
+                        theme_text_color: "Error"
+                        size_hint_y: None
+                        height: dp(24)
+                    
+                    Widget:
+                        size_hint_y: None
+                        height: dp(20)
+            
             Widget:
 
 <UpdateScreen>:
@@ -1758,66 +1817,6 @@
                 size_hint_y: None
                 height: dp(40)
                 on_release: root.do_quit()
-
-            Widget:
-                        
-                        MDRaisedButton:
-                            id: add_review_btn
-                            text: "Laisser un avis"
-                            md_bg_color: 0.13, 0.59, 0.95, 1
-                            font_size: "11sp"
-                            height: dp(36)
-                            on_release: root.open_review_dialog()
-                    
-                    MDCard:
-                        orientation: "vertical"
-                        padding: dp(12)
-                        radius: [10, 10, 10, 10]
-                        size_hint_y: None
-                        height: self.minimum_height
-                        id: reviews_container
-                        
-                        MDLabel:
-                            id: no_reviews
-                            text: "Aucun avis pour le moment"
-                            theme_text_color: "Hint"
-                            font_size: "12sp"
-                            halign: "center"
-                            size_hint_y: None
-                            height: dp(40)
-                    
-                    Widget:
-                        size_hint_y: None
-                        height: dp(16)
-                    
-                    MDBoxLayout:
-                        orientation: "horizontal"
-                        spacing: dp(12)
-                        size_hint_y: None
-                        height: dp(48)
-                        MDTextField:
-                            id: d_qty
-                            hint_text: "Qte"
-                            text: "1"
-                            mode: "rectangle"
-                            input_filter: "int"
-                            size_hint_x: 0.3
-                            height: dp(48)
-                        MDRaisedButton:
-                            text: "Ajouter au panier"
-                            md_bg_color: 0.13, 0.61, 0.55, 1
-                            font_size: "14sp"
-                            on_release: root.request_add_to_cart()
-                    
-                    MDLabel:
-                        text: root.message
-                        theme_text_color: "Error"
-                        size_hint_y: None
-                        height: dp(24)
-                    
-                    Widget:
-                        size_hint_y: None
-                        height: dp(20)
 
 <CartScreen>:
     MDScreen:
@@ -2174,6 +2173,48 @@
                             md_bg_color: 0.13, 0.59, 0.95, 1
                             text_color: 1, 1, 1, 1
                             on_release: root.save_profile()
+                            size_hint_x: 1
+                            size_hint_y: None
+                            height: dp(50)
+                    
+                    # Test upload image
+                    MDCard:
+                        orientation: "vertical"
+                        padding: dp(16)
+                        spacing: dp(12)
+                        size_hint_y: None
+                        height: dp(120)
+                        md_bg_color: 1, 1, 1, 1
+                        
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            size_hint_y: None
+                            height: dp(24)
+                            spacing: dp(8)
+                            MDIcon:
+                                icon: "cloud-upload"
+                                theme_text_color: "Custom"
+                                text_color: 0.13, 0.59, 0.95, 1
+                                size_hint: None, None
+                                size: dp(24), dp(24)
+                            MDLabel:
+                                text: "Test Upload Image"
+                                font_style: "H6"
+                                theme_text_color: "Custom"
+                                text_color: 0.2, 0.2, 0.2, 1
+                                size_hint_y: None
+                                height: dp(24)
+                        
+                        MDSeparator:
+                            size_hint_y: None
+                            height: dp(1)
+                            color: 0.9, 0.9, 0.9, 1
+                        
+                        MDRaisedButton:
+                            text: "Choisir et uploader une image"
+                            md_bg_color: 0.13, 0.59, 0.95, 1
+                            text_color: 1, 1, 1, 1
+                            on_release: app.pick_and_upload_image(lambda url: setattr(self, 'text', f'URL: {url}'))
                             size_hint_x: 1
                             size_hint_y: None
                             height: dp(50)
