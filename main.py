@@ -1,5 +1,6 @@
 import json
 import os
+import threading
 import unicodedata
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -1483,7 +1484,7 @@ class LoadingScreen(Screen):
     def on_pre_enter(self):
         app = App.get_running_app()
         if app.loading_message == "Chargement...":
-            Clock.schedule_once(self.finish_loading, 2)
+            Clock.schedule_once(self.finish_loading, 0.5)
 
     def finish_loading(self, dt):
         app = App.get_running_app()
@@ -1542,21 +1543,23 @@ class ShopMobileApp(MDApp):
 
     def finish_loading(self) -> None:
         self._debug_log("finish_loading: start")
-        settings = db.get_app_settings()
-        self._debug_log(f"finish_loading: settings={settings}")
+        threading.Thread(target=self._bg_load, daemon=True).start()
+
+    def _bg_load(self) -> None:
+        settings, version_info = db.get_app_settings(), db.check_version()
+        Clock.schedule_once(lambda dt: self._on_load_ready(settings, version_info), 0)
+
+    def _on_load_ready(self, settings: dict, version_info: dict) -> None:
+        self._debug_log(f"_on_load_ready: settings={settings}")
         if settings.get("is_blocked"):
-            self._debug_log("finish_loading: app blocked")
             block_msg = settings.get("block_message", "L'application est actuellement en maintenance.")
             self._show_blocked_dialog(block_msg)
             return
-        version_info = db.check_version()
-        self._debug_log(f"finish_loading: version_info={version_info}")
         if version_info:
             current = _parse_version(APP_VERSION)
             min_v = _parse_version(version_info.get("min_version", "0.0.0"))
             latest_v = _parse_version(version_info.get("latest_version", "0.0.0"))
             if min_v > current:
-                self._debug_log("finish_loading: force update required")
                 update_screen = self.root.get_screen("update")
                 update_screen.message = version_info.get("update_message", "Une version plus récente est requise pour continuer. Veuillez télécharger la mise à jour.")
                 update_screen.download_url = version_info.get("download_url", "")
@@ -1564,7 +1567,6 @@ class ShopMobileApp(MDApp):
                 self.root.current = "update"
                 return
             if latest_v > current:
-                self._debug_log("finish_loading: optional update available")
                 update_screen = self.root.get_screen("update")
                 update_screen.message = version_info.get("update_message", "Une nouvelle version est disponible. Téléchargez-la pour profiter des dernières fonctionnalités.")
                 update_screen.download_url = version_info.get("download_url", "")
@@ -1572,11 +1574,9 @@ class ShopMobileApp(MDApp):
                 self.root.current = "update"
                 return
         if self._verify_session():
-            self._debug_log("finish_loading: session OK -> route_after_login")
             self.route_after_login()
         else:
-            self._debug_log("finish_loading: session FAIL -> schedule retry")
-            Clock.schedule_once(self._retry_load_session, 1)
+            Clock.schedule_once(self._retry_load_session, 0.3)
     
     def _show_blocked_dialog(self, message: str) -> None:
         from kivymd.uix.dialog import MDDialog
