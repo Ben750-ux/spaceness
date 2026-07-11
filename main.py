@@ -606,18 +606,23 @@ class MarketScreen(Screen):
         app = App.get_running_app()
         user = app.current_user or {}
         self.user_header = user.get("full_name", "Utilisateur") or "Utilisateur"
-        app.check_notifications()
-        self.refresh_products()
+        self._load_products_async()
 
-    def refresh_products(self) -> None:
+    def _load_products_async(self) -> None:
         app = App.get_running_app()
+        user_id = app.current_user["id"] if app.current_user else None
+        self.message = "Chargement..."
+        threading.Thread(target=lambda: self._bg_load_products(user_id), daemon=True).start()
+
+    def _bg_load_products(self, user_id: Optional[int]) -> None:
         rows = db.list_market_products(search="", category="")
+        fav_ids = set(db.get_favorite_ids(user_id)) if user_id else set()
+        Clock.schedule_once(lambda dt: self._render_products(rows, fav_ids), 0)
+
+    def _render_products(self, rows: List[Dict], fav_ids: set) -> None:
         container = self.ids.market_products
         container.clear_widgets()
         for row in rows:
-            is_fav = False
-            if app.current_user:
-                is_fav = db.is_favorite(app.current_user["id"], row["id"])
             card = ProductCard(
                 product_id=row["id"],
                 shop_id=row["shop_id"],
@@ -627,7 +632,7 @@ class MarketScreen(Screen):
                 price=f"{row['price']:.2f} cr",
                 image_url=_safe_img(row["image_url"]),
                 stock_text=f"Stock: {row['stock']}",
-                is_favorite=is_fav,
+                is_favorite=row["id"] in fav_ids,
             )
             container.add_widget(card)
         self.message = f"{len(rows)} produit(s)"
@@ -665,23 +670,30 @@ class MarketScreen(Screen):
 class SearchScreen(Screen):
     message = StringProperty("")
     filter_dialog: Optional[MDDialog] = None
+    _search_timer: Optional[object] = None
 
     def on_pre_enter(self, *args: Any) -> None:
         app = App.get_running_app()
         self.ids.search_field.text = app.search_value
-        self.refresh_results()
+        self._load_results_async()
 
-    def refresh_results(self) -> None:
+    def _load_results_async(self) -> None:
         app = App.get_running_app()
         search = app.search_value.strip()
         category = app.category_value.strip()
+        user_id = app.current_user["id"] if app.current_user else None
+        self.message = "Recherche..."
+        threading.Thread(target=lambda: self._bg_search(user_id, search, category), daemon=True).start()
+
+    def _bg_search(self, user_id: Optional[int], search: str, category: str) -> None:
         rows = db.list_market_products(search=search, category=category)
+        fav_ids = set(db.get_favorite_ids(user_id)) if user_id else set()
+        Clock.schedule_once(lambda dt: self._render_results(rows, fav_ids), 0)
+
+    def _render_results(self, rows: List[Dict], fav_ids: set) -> None:
         container = self.ids.search_products
         container.clear_widgets()
         for row in rows:
-            is_fav = False
-            if app.current_user:
-                is_fav = db.is_favorite(app.current_user["id"], row["id"])
             card = ProductCard(
                 product_id=row["id"],
                 shop_id=row["shop_id"],
@@ -691,7 +703,7 @@ class SearchScreen(Screen):
                 price=f"{row['price']:.2f} cr",
                 image_url=_safe_img(row["image_url"]),
                 stock_text=f"Stock: {row['stock']}",
-                is_favorite=is_fav,
+                is_favorite=row["id"] in fav_ids,
             )
             container.add_widget(card)
         self.message = f"{len(rows)} produit(s) trouvé(s)"
@@ -708,14 +720,15 @@ class SearchScreen(Screen):
         App.get_running_app().root.current = "market"
 
     def on_search_text(self, text: str) -> None:
-        """Met à jour la recherche en temps réel"""
         App.get_running_app().search_value = text
-        self.refresh_results()
+        if self._search_timer:
+            Clock.unschedule(self._search_timer)
+        self._search_timer = Clock.schedule_once(lambda dt: self._load_results_async(), 0.3)
 
     def apply_search_bar(self) -> None:
         app = App.get_running_app()
         app.search_value = self.ids.search_field.text.strip()
-        self.refresh_results()
+        self._load_results_async()
 
     def open_filters(self) -> None:
         app = App.get_running_app()
@@ -747,7 +760,7 @@ class SearchScreen(Screen):
         app.qty_value = content.ids.f_qty.text.strip() or "1"
         self.ids.search_field.text = app.search_value
         self.filter_dialog.dismiss()
-        self.refresh_results()
+        self._load_results_async()
 
     def back_to_market(self) -> None:
         App.get_running_app().root.current = "market"
@@ -759,28 +772,52 @@ class ShopScreen(Screen):
     is_subscribed = BooleanProperty(False)
 
     def load_shop(self, shop_id: int) -> None:
+        self.message = "Chargement..."
+        threading.Thread(target=lambda: self._bg_load_shop(shop_id), daemon=True).start()
+
+    def _bg_load_shop(self, shop_id: int) -> None:
         details = db.get_shop_details(shop_id)
         if not details:
-            self.message = "Boutique introuvable."
+            Clock.schedule_once(lambda dt: setattr(self, "message", "Boutique introuvable."), 0)
             return
-        self.shop_data = dict(details)
         details_dict = dict(details)
+        app = App.get_running_app()
+        user_id = app.current_user["id"] if app.current_user else None
+        subscriber_count = db.get_shop_subscriber_count(shop_id)
+        is_sub = db.is_subscribed_to_shop(user_id, shop_id) if user_id else False
+        rows = db.list_shop_products(shop_id)
+        Clock.schedule_once(lambda dt: self._render_shop(shop_id, details_dict, subscriber_count, is_sub, rows), 0)
+
+    def _render_shop(self, shop_id: int, details_dict: dict, subscriber_count: int, is_sub: bool, rows: List[Dict]) -> None:
+        self.shop_data = {"id": shop_id, **details_dict}
         self.ids.shop_profile_name.text = details_dict["shop_name"]
         self.ids.shop_name_header.text = details_dict["shop_name"]
         self.ids.shop_logo.source = details_dict.get("logo_url") or "img/logo.png"
         self.ids.shop_banner.source = details_dict.get("banner_url") or "img/placeholder_banner.png"
         self.ids.shop_desc.text = details_dict["description"] or "-"
-        
-        subscriber_count = db.get_shop_subscriber_count(shop_id)
         self.ids.subscriber_count.text = f"{subscriber_count} abonné{'s' if subscriber_count > 1 else ''}"
-        
-        app = App.get_running_app()
-        if app.current_user:
-            self.is_subscribed = db.is_subscribed_to_shop(app.current_user["id"], shop_id)
-            self.update_subscribe_button()
-        
-        self.refresh_products()
-    
+        self.is_subscribed = is_sub
+        self.update_subscribe_button()
+        self.message = ""
+        self._render_shop_products_rows(rows)
+
+    def _render_shop_products_rows(self, rows: List[Dict]) -> None:
+        container = self.ids.shop_products
+        container.clear_widgets()
+        for row in rows:
+            card = ProductCard(
+                product_id=row["id"],
+                shop_id=self.shop_data.get("id"),
+                title=f"{row['name']} ({row['category']})",
+                subtitle=f"Stock: {row['stock']} | {'Actif' if row['is_active'] else 'Inactif'}",
+                description=row["description"] or "-",
+                price=f"{row['price']:.2f} credits",
+                image_url=_safe_img(row["image_url"]),
+                stock_text=f"Stock: {row['stock']}",
+                show_shop_link=False,
+            )
+            container.add_widget(card)
+
     def update_subscribe_button(self) -> None:
         """Met à jour le texte et la couleur du bouton d'abonnement"""
         btn = self.ids.subscribe_btn
@@ -819,27 +856,6 @@ class ShopScreen(Screen):
         
         self.update_subscribe_button()
         Clock.schedule_once(lambda dt: setattr(self, "message", ""), 3)
-
-    def refresh_products(self) -> None:
-        shop_id = self.shop_data.get("id")
-        if not shop_id:
-            return
-        rows = db.list_shop_products(shop_id)
-        container = self.ids.shop_products
-        container.clear_widgets()
-        for row in rows:
-            card = ProductCard(
-                product_id=row["id"],
-                shop_id=shop_id,
-                title=f"{row['name']} ({row['category']})",
-                subtitle=f"Stock: {row['stock']} | {'Actif' if row['is_active'] else 'Inactif'}",
-                description=row["description"] or "-",
-                price=f"{row['price']:.2f} credits",
-                image_url=_safe_img(row["image_url"]),
-                stock_text=f"Stock: {row['stock']}",
-                show_shop_link=False,
-            )
-            container.add_widget(card)
 
 
 class ProductDetailsScreen(Screen):
@@ -1383,16 +1399,24 @@ class FavoritesScreen(Screen):
     message = StringProperty("")
 
     def on_pre_enter(self) -> None:
-        self.refresh_favorites()
+        self._load_favorites_async()
 
-    def refresh_favorites(self) -> None:
+    def _load_favorites_async(self) -> None:
         app = App.get_running_app()
-        container = self.ids.favorites_grid
-        container.clear_widgets()
         if not app.current_user:
             self.message = "Veuillez vous connecter"
             return
+        self.message = "Chargement..."
+        threading.Thread(target=self._bg_favorites, daemon=True).start()
+
+    def _bg_favorites(self) -> None:
+        app = App.get_running_app()
         rows = db.list_favorites(app.current_user["id"])
+        Clock.schedule_once(lambda dt: self._render_favorites(rows), 0)
+
+    def _render_favorites(self, rows: List[Dict]) -> None:
+        container = self.ids.favorites_grid
+        container.clear_widgets()
         if not rows:
             empty_card = MDCard(
                 orientation="vertical",
@@ -1426,16 +1450,24 @@ class HistoryScreen(Screen):
     message = StringProperty("")
 
     def on_pre_enter(self) -> None:
-        self.refresh_history()
+        self._load_history_async()
 
-    def refresh_history(self) -> None:
+    def _load_history_async(self) -> None:
         app = App.get_running_app()
-        container = self.ids.history_grid
-        container.clear_widgets()
         if not app.current_user:
             self.message = "Veuillez vous connecter"
             return
-        rows = db.list_history(app.current_user["id"])
+        self.message = "Chargement..."
+        threading.Thread(target=lambda: self._bg_history(app.current_user["id"]), daemon=True).start()
+
+    def _bg_history(self, user_id: int) -> None:
+        rows = db.list_history(user_id)
+        fav_ids = set(db.get_favorite_ids(user_id))
+        Clock.schedule_once(lambda dt: self._render_history(rows, fav_ids), 0)
+
+    def _render_history(self, rows: List[Dict], fav_ids: set) -> None:
+        container = self.ids.history_grid
+        container.clear_widgets()
         if not rows:
             empty_card = MDCard(
                 orientation="vertical",
@@ -1451,9 +1483,6 @@ class HistoryScreen(Screen):
             container.add_widget(empty_card)
             return
         for row in rows:
-            is_fav = False
-            if app.current_user:
-                is_fav = db.is_favorite(app.current_user["id"], row["id"])
             card = ProductCard(
                 product_id=row["id"],
                 shop_id=row["shop_id"],
@@ -1462,7 +1491,7 @@ class HistoryScreen(Screen):
                 price=f"{row['price']:.2f} cr",
                 image_url=_safe_img(row["image_url"]),
                 stock_text=f"Stock: {row['stock']}",
-                is_favorite=is_fav,
+                is_favorite=row["id"] in fav_ids,
             )
             container.add_widget(card)
         self.message = f"{len(rows)} produit(s) vus"
@@ -1473,7 +1502,7 @@ class HistoryScreen(Screen):
             return
         db.clear_history(app.current_user["id"])
         self.message = "Historique effacé"
-        self.refresh_history()
+        self._load_history_async()
 
 
 class RootManager(ScreenManager):

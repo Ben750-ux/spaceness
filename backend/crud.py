@@ -477,6 +477,14 @@ async def list_favorites(user_id: int) -> List[Dict[str, Any]]:
         return [dict(r._mapping) for r in result.all()]
 
 
+async def get_favorite_product_ids(user_id: int) -> List[int]:
+    async with async_session() as session:
+        result = await session.execute(
+            select(Favorite.product_id).where(Favorite.user_id == user_id)
+        )
+        return [r[0] for r in result.all()]
+
+
 # ============ HISTORY ============
 async def add_to_history(user_id: int, product_id: int) -> None:
     async with async_session() as session:

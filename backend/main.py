@@ -448,6 +448,12 @@ async def list_favorites(user_id: int):
     return {"ok": True, "favorites": favorites}
 
 
+@app.get("/api/favorites/{user_id}/ids")
+async def get_favorite_ids(user_id: int):
+    ids = await db.get_favorite_product_ids(user_id)
+    return {"ok": True, "ids": ids}
+
+
 # ============ HISTORIQUE ============
 @app.get("/api/history/{user_id}")
 async def list_history(user_id: int):

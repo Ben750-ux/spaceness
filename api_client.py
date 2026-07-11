@@ -1,7 +1,8 @@
 import json
 import os
+import threading
 import mimetypes
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.request import Request, urlopen
 from urllib.parse import urlencode
 from uuid import uuid4
@@ -19,7 +20,7 @@ def _request(method: str, url: str, data: Any = None) -> Any:
     body = json.dumps(data).encode() if data else None
     req = Request(url, data=body, headers=headers, method=method)
     try:
-        with urlopen(req, timeout=60) as resp:
+        with urlopen(req, timeout=10) as resp:
             return json.loads(resp.read().decode())
     except HTTPError as e:
         detail = str(e)
@@ -39,6 +40,21 @@ def _get(path: str) -> Any:
 
 def _post(path: str, data: Any) -> Any:
     return _request("POST", _api_url(path), data)
+
+
+def api_async(func: Callable, callback: Callable, *args, **kwargs) -> None:
+    threading.Thread(target=lambda: _api_async_run(func, callback, *args, **kwargs), daemon=True).start()
+
+
+def _api_async_run(func: Callable, callback: Callable, *args, **kwargs) -> None:
+    try:
+        result = func(*args, **kwargs)
+    except Exception as e:
+        result = None
+    try:
+        callback(result)
+    except Exception:
+        pass
 
 
 # ============ UTILITAIRES ============
@@ -248,6 +264,13 @@ def is_favorite(user_id: int, product_id: int) -> bool:
 def list_favorites(user_id: int) -> List[Dict[str, Any]]:
     resp = _get(f"/api/favorites/{user_id}")
     return resp.get("favorites", [])
+
+
+def get_favorite_ids(user_id: int) -> List[int]:
+    if not user_id:
+        return []
+    resp = _get(f"/api/favorites/{user_id}/ids")
+    return resp.get("ids", [])
 
 
 # ============ HISTORIQUE ============
