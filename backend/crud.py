@@ -884,6 +884,33 @@ async def count_unread_messages() -> int:
         return result.scalar() or 0
 
 
+async def count_unread_vendor_messages() -> int:
+    async with async_session() as session:
+        result = await session.execute(
+            select(func.count(VendorAdminMessage.id)).where(VendorAdminMessage.is_read == 0)
+        )
+        return result.scalar() or 0
+
+
+async def count_pending_orders() -> int:
+    async with async_session() as session:
+        result = await session.execute(
+            select(func.count(Order.id)).where(Order.status == "pending")
+        )
+        return result.scalar() or 0
+
+
+async def get_notifications() -> Dict[str, int]:
+    client = await count_unread_messages()
+    vendor = await count_unread_vendor_messages()
+    pending = await count_pending_orders()
+    return {
+        "unread_client_messages": client,
+        "unread_shop_messages": vendor,
+        "pending_orders": pending,
+    }
+
+
 # ============ APP SETTINGS ============
 async def get_app_settings() -> Dict[str, Any]:
     async with async_session() as session:
@@ -1006,6 +1033,16 @@ async def count_shop_orders(shop_id: int) -> int:
             select(func.count(Order.id))
             .join(Product, Order.product_id == Product.id)
             .where(Product.shop_id == shop_id)
+        )
+        return result.scalar() or 0
+
+
+async def count_shop_pending_orders(shop_id: int) -> int:
+    async with async_session() as session:
+        result = await session.execute(
+            select(func.count(Order.id))
+            .join(Product, Order.product_id == Product.id)
+            .where(Product.shop_id == shop_id, Order.status == "pending")
         )
         return result.scalar() or 0
 

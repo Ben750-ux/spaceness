@@ -1523,30 +1523,40 @@ class ShopMobileApp(MDApp):
         root = Builder.load_file("app.kv")
         self.session_file = os.path.join(self.user_data_dir, "session.json")
         self._session_user_id = self._read_session_file()
+        self._debug_log(f"build: user_data_dir={self.user_data_dir}, session_file={self.session_file}, _session_user_id={self._session_user_id}")
         self.update_cart_badge()
         return root
     
     def on_start(self) -> None:
         self.root.current = "loading"
+        Clock.schedule_interval(lambda dt: self.check_notifications(), 30)
     
     def _retry_load_session(self, dt) -> None:
+        self._debug_log("_retry_load_session: retrying...")
         if not self._verify_session():
+            self._debug_log("_retry_load_session: still FAIL -> login screen")
             self.root.current = "login"
         else:
+            self._debug_log("_retry_load_session: SUCCESS -> route_after_login")
             self.route_after_login()
 
     def finish_loading(self) -> None:
+        self._debug_log("finish_loading: start")
         settings = db.get_app_settings()
+        self._debug_log(f"finish_loading: settings={settings}")
         if settings.get("is_blocked"):
+            self._debug_log("finish_loading: app blocked")
             block_msg = settings.get("block_message", "L'application est actuellement en maintenance.")
             self._show_blocked_dialog(block_msg)
             return
         version_info = db.check_version()
+        self._debug_log(f"finish_loading: version_info={version_info}")
         if version_info:
             current = _parse_version(APP_VERSION)
             min_v = _parse_version(version_info.get("min_version", "0.0.0"))
             latest_v = _parse_version(version_info.get("latest_version", "0.0.0"))
             if min_v > current:
+                self._debug_log("finish_loading: force update required")
                 update_screen = self.root.get_screen("update")
                 update_screen.message = version_info.get("update_message", "Une version plus récente est requise pour continuer. Veuillez télécharger la mise à jour.")
                 update_screen.download_url = version_info.get("download_url", "")
@@ -1554,6 +1564,7 @@ class ShopMobileApp(MDApp):
                 self.root.current = "update"
                 return
             if latest_v > current:
+                self._debug_log("finish_loading: optional update available")
                 update_screen = self.root.get_screen("update")
                 update_screen.message = version_info.get("update_message", "Une nouvelle version est disponible. Téléchargez-la pour profiter des dernières fonctionnalités.")
                 update_screen.download_url = version_info.get("download_url", "")
@@ -1561,8 +1572,10 @@ class ShopMobileApp(MDApp):
                 self.root.current = "update"
                 return
         if self._verify_session():
+            self._debug_log("finish_loading: session OK -> route_after_login")
             self.route_after_login()
         else:
+            self._debug_log("finish_loading: session FAIL -> schedule retry")
             Clock.schedule_once(self._retry_load_session, 1)
     
     def _show_blocked_dialog(self, message: str) -> None:
@@ -1831,6 +1844,7 @@ class ShopMobileApp(MDApp):
 
     def _save_session(self) -> None:
         if not self.current_user:
+            self._debug_log("_save_session: no current_user, skipping")
             return
         payload = {
             "user_id": self.current_user["id"],
@@ -1839,6 +1853,7 @@ class ShopMobileApp(MDApp):
         }
         with open(self.session_file, "w", encoding="utf-8") as f:
             json.dump(payload, f)
+        self._debug_log(f"_save_session: saved user_id={self.current_user['id']} to {self.session_file}")
 
     def _read_session_file(self) -> int:
         if not os.path.exists(self.session_file):
@@ -1850,31 +1865,53 @@ class ShopMobileApp(MDApp):
         except Exception:
             return 0
 
+    def _debug_log(self, msg: str) -> None:
+        try:
+            debug_path = os.path.join(self.user_data_dir, "debug_session.log")
+            with open(debug_path, "a", encoding="utf-8") as f:
+                f.write(f"[{datetime.now().isoformat()}] {msg}\n")
+        except Exception:
+            pass
+
     def _verify_session(self) -> bool:
         user_id = getattr(self, "_session_user_id", 0)
+        self._debug_log(f"_verify_session: user_id={user_id}")
         if not user_id:
+            self._debug_log("_verify_session: no user_id -> False")
             return False
         user = None
         from_api = True
         try:
             user = db.get_user_by_id(user_id)
-        except Exception:
+            self._debug_log(f"_verify_session: API returned user={user}")
+        except Exception as e:
+            self._debug_log(f"_verify_session: API exception: {e}")
             user = None
         if not user:
+            self._debug_log("_verify_session: API no user, trying cache")
             user = self._read_cached_user()
             from_api = False
+            self._debug_log(f"_verify_session: cache returned user={user}")
         if not user:
+            self._debug_log("_verify_session: no user at all -> clear + False")
             self._clear_session()
             return False
-        if user.get("role") != "client":
+        role = user.get("role")
+        iv = user.get("is_verified")
+        self._debug_log(f"_verify_session: role={role}, is_verified={iv}, from_api={from_api}")
+        if role != "client":
+            self._debug_log("_verify_session: wrong role -> clear + False")
             self._clear_session()
             return False
-        if not from_api and user.get("is_verified") is None:
+        if not from_api and iv is None:
             user["is_verified"] = True
+            self._debug_log("_verify_session: cache missing is_verified, set to True")
         if not user.get("is_verified"):
+            self._debug_log("_verify_session: not verified -> clear + False")
             self._clear_session()
             return False
         self.current_user = user
+        self._debug_log("_verify_session: SUCCESS")
         return True
 
     def _read_cached_user(self) -> Optional[Dict[str, Any]]:

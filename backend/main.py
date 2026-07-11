@@ -677,11 +677,12 @@ async def vendor_login(req: VendorLoginRequest):
 
 @app.get("/api/vendor/stats")
 async def vendor_get_stats(shop_id: int):
-    products, orders, revenue, subscribers = await asyncio.gather(
+    products, orders, revenue, subscribers, pending = await asyncio.gather(
         db.count_shop_products(shop_id),
         db.count_shop_orders(shop_id),
         db.get_shop_revenue(shop_id),
         db.get_shop_subscriber_count(shop_id),
+        db.count_shop_pending_orders(shop_id),
     )
     return {
         "ok": True,
@@ -689,6 +690,7 @@ async def vendor_get_stats(shop_id: int):
         "total_orders": orders,
         "total_revenue": revenue,
         "total_subscribers": subscribers,
+        "pending_orders": pending,
     }
 
 
@@ -828,6 +830,12 @@ async def mark_read(req: MarkReadRequest):
 async def unread_count():
     count = await db.count_unread_messages()
     return {"ok": True, "count": count}
+
+
+@app.get("/api/admin/notifications")
+async def admin_notifications():
+    notifications = await db.get_notifications()
+    return {"ok": True, **notifications}
 
 
 # ============ PARAMÈTRES APP ============
