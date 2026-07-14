@@ -1562,6 +1562,8 @@ class ShopMobileApp(MDApp):
     def on_start(self) -> None:
         self.root.current = "loading"
         Clock.schedule_interval(lambda dt: self.check_notifications(), 30)
+        Clock.schedule_interval(lambda dt: self.check_blocked(), 60)
+        Clock.schedule_once(lambda dt: self.check_blocked(), 2)
     
     def _retry_load_session(self, dt) -> None:
         self._debug_log("_retry_load_session: retrying...")
@@ -1609,11 +1611,28 @@ class ShopMobileApp(MDApp):
         else:
             Clock.schedule_once(self._retry_load_session, 0.3)
     
+    def check_blocked(self) -> None:
+        db.api_async(db.get_app_settings, self._on_block_check)
+    
+    def _on_block_check(self, settings) -> None:
+        Clock.schedule_once(lambda dt: self._process_block_check(settings))
+    
+    def _process_block_check(self, settings) -> None:
+        if settings and settings.get("is_blocked"):
+            block_msg = settings.get("block_message", "L'application est actuellement en maintenance.")
+            self._show_blocked_dialog(block_msg)
+    
     def _show_blocked_dialog(self, message: str) -> None:
         from kivymd.uix.dialog import MDDialog
         from kivymd.uix.button import MDRaisedButton
         
-        dlg = MDDialog(
+        if hasattr(self, '_blocked_dlg') and self._blocked_dlg:
+            try:
+                self._blocked_dlg.dismiss()
+            except Exception:
+                pass
+        
+        self._blocked_dlg = MDDialog(
             title="🔒 Application bloquée",
             text=message,
             buttons=[
@@ -1623,8 +1642,8 @@ class ShopMobileApp(MDApp):
                 )
             ]
         )
-        dlg._real_release_on_auto_dismiss_behavior = False
-        dlg.open()
+        self._blocked_dlg._real_release_on_auto_dismiss_behavior = False
+        self._blocked_dlg.open()
     
     def check_notifications(self) -> None:
         if not self.current_user:
