@@ -300,6 +300,30 @@ async def update_product_stock(
     return True, "Produit mis a jour."
 
 
+async def update_product_images(
+    product_id: int, owner_user_id: int,
+    image_url: str = "", image_url_2: str = "", image_url_3: str = "",
+) -> Tuple[bool, str]:
+    async with async_session() as session:
+        result = await session.execute(
+            select(Product).join(Shop).where(
+                Product.id == product_id,
+                Shop.owner_user_id == owner_user_id,
+            )
+        )
+        product = result.scalar_one_or_none()
+        if not product:
+            return False, "Produit introuvable."
+        if image_url:
+            product.image_url = image_url.strip()
+        if image_url_2:
+            product.image_url_2 = image_url_2.strip()
+        if image_url_3:
+            product.image_url_3 = image_url_3.strip()
+        await session.commit()
+    return True, "Image mise a jour."
+
+
 async def list_shop_products(shop_id: int) -> List[Dict[str, Any]]:
     async with async_session() as session:
         result = await session.execute(

@@ -420,6 +420,25 @@ async def update_product_stock(req: ProductUpdateRequest):
     return {"ok": True, "message": msg}
 
 
+class ProductImagesRequest(BaseModel):
+    product_id: int
+    owner_user_id: int
+    image_url: str = ""
+    image_url_2: str = ""
+    image_url_3: str = ""
+
+
+@app.post("/api/products/update-images")
+async def update_product_images(req: ProductImagesRequest):
+    ok, msg = await db.update_product_images(
+        req.product_id, req.owner_user_id,
+        req.image_url, req.image_url_2, req.image_url_3,
+    )
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"ok": True, "message": msg}
+
+
 # ============ BOUTIQUES ============
 @app.get("/api/shops/{shop_id}")
 async def get_shop(shop_id: int):
