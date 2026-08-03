@@ -253,6 +253,29 @@ class ActivityLog(Base):
     )
 
 
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=True)
+    transaction_id = Column(String(255), nullable=False, unique=True)
+    cinetpay_token = Column(String(512), nullable=True)
+    amount = Column(Integer, nullable=False)
+    currency = Column(String(10), nullable=False, default="CDF")
+    phone_number = Column(String(50), nullable=True)
+    payment_method = Column(String(50), nullable=True)
+    status = Column(String(30), nullable=False, default="PENDING")
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    paid_at = Column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        Index("idx_payments_user", "user_id"),
+        Index("idx_payments_transaction", "transaction_id"),
+    )
+
+
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

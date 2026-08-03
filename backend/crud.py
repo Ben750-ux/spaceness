@@ -9,7 +9,7 @@ from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import (
-    ActivityLog, AdminMessage, AppSetting, Favorite, LoginAttempt, Order, Product,
+    ActivityLog, AdminMessage, AppSetting, Favorite, LoginAttempt, Order, Payment, Product,
     ProductReview, Shop, ShopSubscription, User, UserRole, ViewHistory,
     VendorAdminMessage, async_session,
 )
@@ -1522,3 +1522,83 @@ async def seed_default_settings():
     async with async_session() as session:
         await _ensure_default_settings(session)
         await session.commit()
+
+
+# ============ PAIEMENTS ============
+async def create_payment(user_id: int, transaction_id: str, amount: int, currency: str,
+                         phone_number: str, description: str = "",
+                         order_items_json: str = "") -> bool:
+    try:
+        async with async_session() as session:
+            payment = Payment(
+                user_id=user_id, transaction_id=transaction_id,
+                amount=amount, currency=currency, phone_number=phone_number,
+                description=order_items_json if order_items_json else description,
+                status="PENDING",
+            )
+            session.add(payment)
+            await session.commit()
+        return True
+    except Exception:
+        return False
+
+
+async def create_order_from_cart(client_user_id: int, items: List[Dict[str, Any]]) -> List[int]:
+    order_ids = []
+    async with async_session() as session:
+        for item in items:
+            product_id = item.get("product_id")
+            qty = item.get("qty", 1)
+            if not product_id or qty <= 0:
+                continue
+            result = await session.execute(
+                select(Product).where(Product.id == product_id)
+            )
+            product = result.scalar_one_or_none()
+            if not product or not product.is_active or product.stock < qty:
+                continue
+            total = float(product.price) * qty
+            order = Order(
+                client_user_id=client_user_id,
+                product_id=product_id,
+                quantity=qty,
+                total_amount=total,
+                status="pending",
+            )
+            session.add(order)
+            product.stock -= qty
+            await session.flush()
+            order_ids.append(order.id)
+        await session.commit()
+    return order_ids
+
+
+async def update_payment_status(transaction_id: str, status: str, cinetpay_token: str = "",
+                                 payment_method: str = "", paid_at: str = "") -> bool:
+    try:
+        async with async_session() as session:
+            values: Dict[str, Any] = {"status": status}
+            if cinetpay_token:
+                values["cinetpay_token"] = cinetpay_token
+            if payment_method:
+                values["payment_method"] = payment_method
+            if paid_at:
+                values["paid_at"] = paid_at
+            await session.execute(
+                update(Payment).where(Payment.transaction_id == transaction_id).values(**values)
+            )
+            await session.commit()
+        return True
+    except Exception:
+        return False
+
+
+async def get_payment_by_transaction(transaction_id: str) -> Optional[Dict[str, Any]]:
+    async with async_session() as session:
+        result = await session.execute(
+            select(Payment).where(Payment.transaction_id == transaction_id)
+        )
+        row = result.scalar_one_or_none()
+        if row:
+            return {c.name: getattr(row, c.name) for c in Payment.__table__.columns}
+        return None

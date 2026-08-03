@@ -1,14 +1,22 @@
 import asyncio
+import hashlib
+import hmac
+import json
 import os
+import time
 import uuid
 import shutil
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from pathlib import Path
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Request as FastRequest
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from typing import List, Optional
 
 from config import settings
 import crud as db
@@ -317,15 +325,55 @@ async def get_app_version():
 
 
 # ============ UPLOAD ============
+def _cloudinary_upload(file_bytes: bytes, filename: str) -> Optional[str]:
+    cloud_name = settings.cloudinary_cloud_name
+    api_key = settings.cloudinary_api_key
+    api_secret = settings.cloudinary_api_secret
+    if not cloud_name or not api_key or not api_secret:
+        return None
+    timestamp = str(int(time.time()))
+    signature = hashlib.sha1(f"timestamp={timestamp}{api_secret}".encode()).hexdigest()
+
+    boundary = uuid.uuid4().hex
+    body = (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'
+        f"Content-Type: application/octet-stream\r\n\r\n"
+    ).encode() + file_bytes + f"\r\n--{boundary}\r\n".encode()
+    body += (
+        f'Content-Disposition: form-data; name="api_key"\r\n\r\n{api_key}\r\n'
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="timestamp"\r\n\r\n{timestamp}\r\n'
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="signature"\r\n\r\n{signature}\r\n'
+        f"--{boundary}--\r\n"
+    ).encode()
+    headers = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
+    url = f"https://api.cloudinary.com/v1_1/{cloud_name}/image/upload"
+    req = Request(url, data=body, headers=headers, method="POST")
+    try:
+        with urlopen(req, timeout=60) as resp:
+            result = json.loads(resp.read().decode())
+    except HTTPError as e:
+        return None
+    return result.get("secure_url") or result.get("url")
+
+
 @app.post("/api/upload")
 async def upload_image(file: UploadFile = File(...)):
     ext = Path(file.filename).suffix.lower() if file.filename else ".jpg"
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=400, detail=f"Format non autorise: {ext}. Utilisez jpg, png, gif, webp, bmp.")
+    data = await file.read()
+
+    cloud_url = _cloudinary_upload(data, f"{uuid.uuid4().hex}{ext}")
+    if cloud_url:
+        return {"ok": True, "url": cloud_url, "filename": cloud_url.rsplit("/", 1)[-1]}
+
     filename = f"{uuid.uuid4().hex}{ext}"
     filepath = UPLOAD_DIR / filename
     with open(filepath, "wb") as f:
-        shutil.copyfileobj(file.file, f)
+        f.write(data)
     url = f"/uploads/{filename}"
     return {"ok": True, "url": url, "filename": filename}
 
@@ -859,10 +907,154 @@ async def set_app_settings(req: AppSettingsRequest):
     return {"ok": True}
 
 
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 8000))
-    import os
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+# ============ HEALTH ============
+@app.get("/api/health")
+async def health():
+    return {"ok": True, "status": "alive"}
+
+
+# ============ PAIEMENTS CINETPAY ============
+class PaymentInitRequest(BaseModel):
+    user_id: int
+    amount: int
+    currency: str = "CDF"
+    phone_number: str
+    description: str = "Achat Spaceness"
+    order_items: list[dict] = []
+
+
+@app.post("/api/payment/initiate")
+async def initiate_payment(req: PaymentInitRequest):
+    apikey = settings.cinetpay_apikey
+    site_id = settings.cinetpay_site_id
+    if not apikey or not site_id:
+        raise HTTPException(status_code=500, detail="CinetPay non configure")
+
+    transaction_id = f"SP-{uuid.uuid4().hex[:12]}"
+    base_url = os.environ.get("API_URL", f"http://localhost:{settings.port}")
+
+    payload = {
+        "apikey": apikey,
+        "site_id": site_id,
+        "transaction_id": transaction_id,
+        "amount": req.amount,
+        "currency": req.currency,
+        "description": req.description,
+        "notify_url": f"{base_url}/api/payment/webhook",
+        "return_url": f"{base_url}/api/payment/return/{transaction_id}",
+        "channels": "MOBILE_MONEY",
+        "lang": "fr",
+        "customer_phone_number": req.phone_number,
+    }
+
+    body = json.dumps(payload).encode()
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "Spaceness-App/1.0",
+    }
+    req_url = Request("https://api-checkout.cinetpay.com/v2/payment",
+                       data=body, headers=headers, method="POST")
+    try:
+        with urlopen(req_url, timeout=30) as resp:
+            result = json.loads(resp.read().decode())
+    except HTTPError as e:
+        detail = str(e)
+        try:
+            detail = json.loads(e.read().decode())
+        except Exception:
+            pass
+        raise HTTPException(status_code=400, detail=f"CinetPay: {detail}")
+
+    if result.get("code") == 201:
+        payment_url = result["data"]["payment_url"]
+        token = result["data"].get("token", "")
+        await db.create_payment(
+            req.user_id, transaction_id, req.amount, req.currency,
+            req.phone_number, req.description, json.dumps(req.order_items),
+        )
+        await db.update_payment_status(transaction_id, "WAITING", cinetpay_token=token)
+        return {
+            "ok": True, "payment_url": payment_url,
+            "transaction_id": transaction_id, "token": token,
+        }
+
+    raise HTTPException(status_code=400, detail=result.get("message", "Erreur CinetPay"))
+
+
+@app.post("/api/payment/webhook")
+async def payment_webhook(request: FastRequest):
+    form_data = await request.form()
+    data = dict(form_data)
+
+    transaction_id = data.get("cpm_trans_id", "")
+    site_id = data.get("cpm_site_id", "")
+
+    if not transaction_id or not site_id:
+        return {"status": "error"}
+
+    payment = await db.get_payment_by_transaction(transaction_id)
+    if not payment:
+        return {"status": "unknown_transaction"}
+
+    if payment["status"] in ("ACCEPTED", "REFUSED"):
+        return {"status": "already_processed"}
+
+    apikey = settings.cinetpay_apikey
+    verify_payload = json.dumps({
+        "apikey": apikey,
+        "site_id": site_id,
+        "transaction_id": transaction_id,
+    }).encode()
+    verify_req = Request(
+        "https://api-checkout.cinetpay.com/v2/payment/check",
+        data=verify_payload,
+        headers={"Content-Type": "application/json", "User-Agent": "Spaceness-App/1.0"},
+        method="POST",
+    )
+    try:
+        with urlopen(verify_req, timeout=30) as resp:
+            verify_result = json.loads(resp.read().decode())
+    except Exception:
+        return {"status": "verification_failed"}
+
+    if verify_result.get("code") == 200:
+        status = verify_result["data"]["status"]
+        payment_method = verify_result["data"].get("payment_method", "")
+        paid_at = verify_result["data"].get("payment_date", "")
+
+        if status == "ACCEPTED":
+            await db.update_payment_status(
+                transaction_id, "ACCEPTED",
+                payment_method=payment_method, paid_at=paid_at,
+            )
+            await _create_order_from_payment(payment)
+        elif status == "REFUSED":
+            await db.update_payment_status(transaction_id, "REFUSED", payment_method=payment_method)
+
+    return {"status": "ok"}
+
+
+async def _create_order_from_payment(payment: dict) -> None:
+    items = []
+    try:
+        items = json.loads(payment.get("description") or "[]")
+    except (json.JSONDecodeError, TypeError):
+        items = []
+    if items:
+        await db.create_order_from_cart(payment["user_id"], items)
+
+
+@app.get("/api/payment/return/{transaction_id}")
+async def payment_return(transaction_id: str):
+    return {"ok": True, "transaction_id": transaction_id, "message": "Paiement traite"}
+
+
+@app.get("/api/payment/{transaction_id}/status")
+async def payment_status(transaction_id: str):
+    payment = await db.get_payment_by_transaction(transaction_id)
+    if not payment:
+        raise HTTPException(status_code=404, detail="Transaction introuvable")
+    return {"ok": True, "status": payment["status"]}
+
 
 # deploy trigger 2026-06-22 11:13:06

@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     secret_key: str = "dev-secret-key-change-in-production"
     cors_origins: str = "*"
 
+    cinetpay_apikey: str = ""
+    cinetpay_site_id: str = ""
+
+    cloudinary_cloud_name: str = ""
+    cloudinary_api_key: str = ""
+    cloudinary_api_secret: str = ""
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
     @property

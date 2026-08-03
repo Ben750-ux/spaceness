@@ -236,6 +236,27 @@ def init_db() -> None:
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_activity_log_user ON activity_log(user_id)")
 
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS payments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                order_id INTEGER,
+                transaction_id TEXT NOT NULL UNIQUE,
+                cinetpay_token TEXT,
+                amount INTEGER NOT NULL,
+                currency TEXT NOT NULL DEFAULT 'CDF',
+                phone_number TEXT,
+                payment_method TEXT,
+                status TEXT NOT NULL DEFAULT 'PENDING',
+                description TEXT,
+                created_at TEXT NOT NULL,
+                paid_at TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_payments_transaction ON payments(transaction_id)")
+
 
 # ============ AUTH ============
 def create_user(full_name: str, email: str, password: str, role: str) -> Tuple[bool, str]:
