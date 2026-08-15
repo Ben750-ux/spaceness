@@ -630,7 +630,7 @@ class MarketScreen(Screen):
                 title=f"{row['name']} ({row['category']})",
                 subtitle=f"{row['shop_name']}",
                 description=row["description"] or "-",
-                price=f"{row['price']:.2f} cr",
+                price=f"{row['price']:.2f} FC",
                 image_url=_safe_img(row["image_url"]),
                 stock_text=f"Stock: {row['stock']}",
                 is_favorite=row["id"] in fav_ids,
@@ -701,7 +701,7 @@ class SearchScreen(Screen):
                 title=f"{row['name']} ({row['category']})",
                 subtitle=f"{row['shop_name']}",
                 description=row["description"] or "-",
-                price=f"{row['price']:.2f} cr",
+                price=f"{row['price']:.2f} FC",
                 image_url=_safe_img(row["image_url"]),
                 stock_text=f"Stock: {row['stock']}",
                 is_favorite=row["id"] in fav_ids,
@@ -812,7 +812,7 @@ class ShopScreen(Screen):
                 title=f"{row['name']} ({row['category']})",
                 subtitle=f"Stock: {row['stock']} | {'Actif' if row['is_active'] else 'Inactif'}",
                 description=row["description"] or "-",
-                price=f"{row['price']:.2f} credits",
+                price=f"{row['price']:.2f} FC",
                 image_url=_safe_img(row["image_url"]),
                 stock_text=f"Stock: {row['stock']}",
                 show_shop_link=False,
@@ -888,7 +888,7 @@ class ProductDetailsScreen(Screen):
         self.ids.d_title.text = row["name"]
         self.ids.d_shop.text = f"Boutique: {row['shop_name']}"
         self.ids.d_category.text = f"Categorie: {row['category']}"
-        self.ids.d_price.text = f"{row['price']:.2f} credits"
+        self.ids.d_price.text = f"{row['price']:.2f} FC"
         self.ids.d_stock.text = f"Stock disponible: {row['stock']}"
         self.ids.d_desc.text = row["description"] or "-"
         
@@ -1004,7 +1004,7 @@ class CartScreen(Screen):
             empty_card.add_widget(MDLabel(text="Votre panier est vide", theme_text_color="Secondary", font_style="Subtitle1", halign="center", size_hint_y=None, height=dp(30)))
             empty_card.add_widget(MDLabel(text="Ajoutez des articles pour commencer", theme_text_color="Hint", font_size="12sp", halign="center", size_hint_y=None, height=dp(24)))
             container.add_widget(empty_card)
-            self.ids.cart_total.text = "Total: 0.00 credits"
+            self.ids.cart_total.text = "Total: 0.00 FC"
             return
         for item in app.cart:
             line_total = item["price"] * item["qty"]
@@ -1054,7 +1054,7 @@ class CartScreen(Screen):
             )
             info.add_widget(
                 Label(
-                    text=f"{item['price']:.2f} cr x {item['qty']}",
+                    text=f"{item['price']:.2f} FC x {item['qty']}",
                     size_hint_y=None,
                     height=dp(18),
                     font_size="12sp",
@@ -1064,7 +1064,7 @@ class CartScreen(Screen):
             )
             info.add_widget(
                 Label(
-                    text=f"Sous-total: {line_total:.2f} cr",
+                    text=f"Sous-total: {line_total:.2f} FC",
                     size_hint_y=None,
                     height=dp(22),
                     bold=True,
@@ -1081,7 +1081,7 @@ class CartScreen(Screen):
             actions.add_widget(btn_det)
             card.add_widget(actions)
             container.add_widget(card)
-        self.ids.cart_total.text = f"Total: {total:.2f} credits"
+        self.ids.cart_total.text = f"Total: {total:.2f} FC"
 
     def remove_line(self, product_id: int) -> None:
         App.get_running_app().remove_cart_item(product_id)
@@ -1191,7 +1191,7 @@ class OrdersScreen(Screen):
         )
         info.add_widget(
             Label(
-                text=f"Qte: {row['quantity']} - {row['total_amount']:.2f} cr",
+                text=f"Qte: {row['quantity']} - {row['total_amount']:.2f} FC",
                 size_hint_y=None,
                 height=dp(18),
                 font_size="11sp",
@@ -1509,7 +1509,7 @@ class FavoritesScreen(Screen):
                 shop_id=row["shop_id"],
                 title=row["name"],
                 subtitle=row["shop_name"],
-                price=f"{row['price']:.2f} cr",
+                price=f"{row['price']:.2f} FC",
                 image_url=_safe_img(row["image_url"]),
                 stock_text=f"Stock: {row['stock']}",
                 is_favorite=True,
@@ -1560,7 +1560,7 @@ class HistoryScreen(Screen):
                 shop_id=row["shop_id"],
                 title=row["name"],
                 subtitle=row["shop_name"],
-                price=f"{row['price']:.2f} cr",
+                price=f"{row['price']:.2f} FC",
                 image_url=_safe_img(row["image_url"]),
                 stock_text=f"Stock: {row['stock']}",
                 is_favorite=row["id"] in fav_ids,
