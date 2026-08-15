@@ -932,148 +932,20 @@ async def health():
     return {"ok": True, "status": "alive"}
 
 
-# ============ PAIEMENTS CINETPAY ============
-class PaymentInitRequest(BaseModel):
+# ============ COMMANDES VIA PANIER ============
+class CartOrderRequest(BaseModel):
     user_id: int
-    amount: int
-    currency: str = "CDF"
-    phone_number: str
-    description: str = "Achat Spaceness"
-    order_items: list[dict] = []
+    items: list[dict] = []
 
 
-@app.post("/api/payment/initiate")
-async def initiate_payment(req: PaymentInitRequest):
-    apikey = settings.cinetpay_apikey
-    site_id = settings.cinetpay_site_id
-    if not apikey or not site_id:
-        raise HTTPException(status_code=500, detail="CinetPay non configure")
-
-    transaction_id = f"SP-{uuid.uuid4().hex[:12]}"
-    base_url = os.environ.get("API_URL", f"http://localhost:{settings.port}")
-
-    payload = {
-        "apikey": apikey,
-        "site_id": site_id,
-        "transaction_id": transaction_id,
-        "amount": req.amount,
-        "currency": req.currency,
-        "description": req.description,
-        "notify_url": f"{base_url}/api/payment/webhook",
-        "return_url": f"{base_url}/api/payment/return/{transaction_id}",
-        "channels": "MOBILE_MONEY",
-        "lang": "fr",
-        "customer_phone_number": req.phone_number,
-    }
-
-    body = json.dumps(payload).encode()
-    headers = {
-        "Content-Type": "application/json",
-        "User-Agent": "Spaceness-App/1.0",
-    }
-    req_url = Request("https://api-checkout.cinetpay.com/v2/payment",
-                       data=body, headers=headers, method="POST")
-    try:
-        with urlopen(req_url, timeout=30) as resp:
-            result = json.loads(resp.read().decode())
-    except HTTPError as e:
-        detail = str(e)
-        try:
-            detail = json.loads(e.read().decode())
-        except Exception:
-            pass
-        raise HTTPException(status_code=400, detail=f"CinetPay: {detail}")
-
-    if result.get("code") == 201:
-        payment_url = result["data"]["payment_url"]
-        token = result["data"].get("token", "")
-        await db.create_payment(
-            req.user_id, transaction_id, req.amount, req.currency,
-            req.phone_number, req.description, json.dumps(req.order_items),
-        )
-        await db.update_payment_status(transaction_id, "WAITING", cinetpay_token=token)
-        return {
-            "ok": True, "payment_url": payment_url,
-            "transaction_id": transaction_id, "token": token,
-        }
-
-    raise HTTPException(status_code=400, detail=result.get("message", "Erreur CinetPay"))
-
-
-@app.post("/api/payment/webhook")
-async def payment_webhook(request: FastRequest):
-    form_data = await request.form()
-    data = dict(form_data)
-
-    transaction_id = data.get("cpm_trans_id", "")
-    site_id = data.get("cpm_site_id", "")
-
-    if not transaction_id or not site_id:
-        return {"status": "error"}
-
-    payment = await db.get_payment_by_transaction(transaction_id)
-    if not payment:
-        return {"status": "unknown_transaction"}
-
-    if payment["status"] in ("ACCEPTED", "REFUSED"):
-        return {"status": "already_processed"}
-
-    apikey = settings.cinetpay_apikey
-    verify_payload = json.dumps({
-        "apikey": apikey,
-        "site_id": site_id,
-        "transaction_id": transaction_id,
-    }).encode()
-    verify_req = Request(
-        "https://api-checkout.cinetpay.com/v2/payment/check",
-        data=verify_payload,
-        headers={"Content-Type": "application/json", "User-Agent": "Spaceness-App/1.0"},
-        method="POST",
-    )
-    try:
-        with urlopen(verify_req, timeout=30) as resp:
-            verify_result = json.loads(resp.read().decode())
-    except Exception:
-        return {"status": "verification_failed"}
-
-    if verify_result.get("code") == 200:
-        status = verify_result["data"]["status"]
-        payment_method = verify_result["data"].get("payment_method", "")
-        paid_at = verify_result["data"].get("payment_date", "")
-
-        if status == "ACCEPTED":
-            await db.update_payment_status(
-                transaction_id, "ACCEPTED",
-                payment_method=payment_method, paid_at=paid_at,
-            )
-            await _create_order_from_payment(payment)
-        elif status == "REFUSED":
-            await db.update_payment_status(transaction_id, "REFUSED", payment_method=payment_method)
-
-    return {"status": "ok"}
-
-
-async def _create_order_from_payment(payment: dict) -> None:
-    items = []
-    try:
-        items = json.loads(payment.get("description") or "[]")
-    except (json.JSONDecodeError, TypeError):
-        items = []
-    if items:
-        await db.create_order_from_cart(payment["user_id"], items)
-
-
-@app.get("/api/payment/return/{transaction_id}")
-async def payment_return(transaction_id: str):
-    return {"ok": True, "transaction_id": transaction_id, "message": "Paiement traite"}
-
-
-@app.get("/api/payment/{transaction_id}/status")
-async def payment_status(transaction_id: str):
-    payment = await db.get_payment_by_transaction(transaction_id)
-    if not payment:
-        raise HTTPException(status_code=404, detail="Transaction introuvable")
-    return {"ok": True, "status": payment["status"]}
+@app.post("/api/orders/from-cart")
+async def create_orders_from_cart(req: CartOrderRequest):
+    if not req.items:
+        raise HTTPException(status_code=400, detail="Panier vide")
+    order_ids = await db.create_order_from_cart(req.user_id, req.items)
+    if not order_ids:
+        raise HTTPException(status_code=400, detail="Aucune commande creee (stock insuffisant ou produit indisponible)")
+    return {"ok": True, "order_ids": order_ids, "message": f"{len(order_ids)} commande(s) enregistree(s)"}
 
 
 # deploy trigger 2026-06-22 11:13:06

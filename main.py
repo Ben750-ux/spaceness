@@ -36,7 +36,7 @@ def _safe_img(url: str) -> str:
         api_url = os.environ.get("API_URL", "https://spaceness.onrender.com")
         return f"{api_url}{url}"
     if url.startswith("http://") or url.startswith("https://"):
-        return "img/placeholder_product.png"
+        return url
     return url
 
 import api_client as db
@@ -1802,7 +1802,7 @@ class ShopMobileApp(MDApp):
         dlg = MDDialog(
             type="simple",
             title="Commander",
-            text="Confirmer la commande ? Les articles seront enregistres dans Mes commandes.",
+            text="Confirmer la commande ? Le paiement se fera a la livraison.",
             buttons=[
                 MDFlatButton(text="Annuler", on_release=lambda *_: dlg.dismiss()),
                 MDRaisedButton(text="Confirmer", on_release=confirm),
@@ -1813,19 +1813,11 @@ class ShopMobileApp(MDApp):
     def _execute_checkout_orders(self) -> tuple[bool, str]:
         if not self.cart:
             return False, "Panier vide."
-        errors: List[str] = []
-        success_count = 0
-        for item in self.cart:
-            ok, msg = db.place_order(self.current_user["id"], item["product_id"], item["qty"])
-            if ok:
-                success_count += 1
-            else:
-                errors.append(f"{item['name']}: {msg}")
+        items = [{"product_id": int(i["product_id"]), "qty": int(i["qty"])} for i in self.cart]
+        ok, msg = db.create_orders_from_cart(self.current_user["id"], items)
         self.cart = []
         self.update_cart_badge()
-        if errors:
-            return False, f"{success_count} commande(s) ok. Erreurs: {' | '.join(errors[:2])}"
-        return True, f"{success_count} commande(s) enregistree(s)."
+        return ok, msg
 
     def remove_cart_item(self, product_id: int) -> None:
         self.cart = [x for x in self.cart if int(x["product_id"]) != int(product_id)]

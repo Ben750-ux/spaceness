@@ -240,6 +240,13 @@ def place_order(client_user_id: int, product_id: int, quantity: int) -> Tuple[bo
     return False, resp.get("detail", "Erreur.")
 
 
+def create_orders_from_cart(user_id: int, items: List[Dict[str, Any]]) -> Tuple[bool, str]:
+    resp = _post("/api/orders/from-cart", {"user_id": user_id, "items": items})
+    if resp.get("ok"):
+        return True, resp.get("message", "Commande enregistree.")
+    return False, resp.get("detail", "Erreur.")
+
+
 def list_orders_for_client(client_user_id: int) -> List[Dict[str, Any]]:
     resp = _get(f"/api/orders/client/{client_user_id}")
     return resp.get("orders", [])
