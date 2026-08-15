@@ -252,6 +252,20 @@ def list_orders_for_client(client_user_id: int) -> List[Dict[str, Any]]:
     return resp.get("orders", [])
 
 
+def list_active_orders_for_client(client_user_id: int) -> List[Dict[str, Any]]:
+    resp = _get(f"/api/orders/client/{client_user_id}/active")
+    return resp.get("orders", [])
+
+
+def get_order_by_delivery_code(delivery_code: str) -> Optional[Dict[str, Any]]:
+    resp = _get(f"/api/orders/lookup/{delivery_code}")
+    return resp.get("order") if resp.get("ok") else None
+
+
+def order_qr_url(order_id: int) -> str:
+    return f"{API_URL}/api/orders/qr/{order_id}"
+
+
 # ============ FAVORIS ============
 def add_to_favorites(user_id: int, product_id: int) -> bool:
     resp = _post("/api/favorites/add", {"user_id": user_id, "product_id": product_id})

@@ -16,6 +16,10 @@ from models import (
 
 
 # ============ HELPERS ============
+def _generate_delivery_code() -> str:
+    return "SP-" + secrets.token_hex(4).upper()
+
+
 def _hash_password(password: str, salt: Optional[str] = None) -> Tuple[str, str]:
     if salt is None:
         salt = os.urandom(16).hex()
@@ -404,6 +408,7 @@ async def place_order(
             quantity=quantity,
             total_amount=total,
             status="pending",
+            delivery_code=_generate_delivery_code(),
         )
         session.add(order)
         product.stock -= quantity
@@ -416,7 +421,7 @@ async def list_orders_for_client(client_user_id: int) -> List[Dict[str, Any]]:
         query = (
             select(
                 Order.id, Order.quantity, Order.total_amount, Order.status,
-                Order.created_at,
+                Order.delivery_code, Order.created_at,
                 Product.id.label("product_id"), Product.name.label("product_name"),
                 Product.description.label("product_description"),
                 Product.price.label("product_price"),
@@ -433,6 +438,104 @@ async def list_orders_for_client(client_user_id: int) -> List[Dict[str, Any]]:
         )
         result = await session.execute(query)
         return [dict(r._mapping) for r in result.all()]
+
+
+ACTIVE_ORDER_STATUSES = ("pending", "confirmed", "shipped")
+
+
+async def list_active_orders_for_client(client_user_id: int) -> List[Dict[str, Any]]:
+    async with async_session() as session:
+        query = (
+            select(
+                Order.id, Order.quantity, Order.total_amount, Order.status,
+                Order.delivery_code, Order.created_at,
+                Product.id.label("product_id"), Product.name.label("product_name"),
+                Product.description.label("product_description"),
+                Product.price.label("product_price"),
+                Product.image_url.label("product_image_url"),
+                Product.image_url_2.label("product_image_url_2"),
+                Product.image_url_3.label("product_image_url_3"),
+                Product.category.label("product_category"),
+                Shop.id.label("shop_id"), Shop.shop_name, Shop.logo_url.label("shop_logo_url"),
+            )
+            .join(Product, Order.product_id == Product.id)
+            .join(Shop, Product.shop_id == Shop.id)
+            .where(
+                Order.client_user_id == client_user_id,
+                Order.status.in_(ACTIVE_ORDER_STATUSES),
+            )
+            .order_by(Order.id.desc())
+        )
+        result = await session.execute(query)
+        return [dict(r._mapping) for r in result.all()]
+
+
+async def get_order_by_delivery_code(delivery_code: str) -> Optional[Dict[str, Any]]:
+    async with async_session() as session:
+        query = (
+            select(
+                Order.id, Order.quantity, Order.total_amount, Order.status,
+                Order.delivery_code, Order.created_at,
+                User.full_name.label("client_name"), User.email.label("client_email"),
+                User.phone.label("client_phone"),
+                Product.id.label("product_id"), Product.name.label("product_name"),
+                Product.price.label("product_price"),
+                Product.image_url.label("product_image_url"),
+                Shop.id.label("shop_id"), Shop.shop_name,
+            )
+            .join(User, Order.client_user_id == User.id)
+            .join(Product, Order.product_id == Product.id)
+            .join(Shop, Product.shop_id == Shop.id)
+            .where(Order.delivery_code == delivery_code)
+        )
+        result = await session.execute(query)
+        row = result.first()
+        if row:
+            return dict(row._mapping)
+        return None
+
+
+async def get_order_delivery_info(order_id: int) -> Optional[Dict[str, Any]]:
+    async with async_session() as session:
+        result = await session.execute(
+            select(
+                Order.id, Order.status, Order.delivery_code,
+                Product.id.label("product_id"), Product.name.label("product_name"),
+                Shop.shop_name,
+            )
+            .join(Product, Order.product_id == Product.id)
+            .join(Shop, Product.shop_id == Shop.id)
+            .where(Order.id == order_id)
+        )
+        row = result.first()
+        if row:
+            return dict(row._mapping)
+        return None
+
+
+async def get_order_full_by_id(order_id: int) -> Optional[Dict[str, Any]]:
+    async with async_session() as session:
+        query = (
+            select(
+                Order.id, Order.quantity, Order.total_amount, Order.status,
+                Order.delivery_code, Order.created_at,
+                User.full_name.label("client_name"), User.email.label("client_email"),
+                User.phone.label("client_phone"),
+                Product.id.label("product_id"), Product.name.label("product_name"),
+                Product.price.label("product_price"),
+                Product.image_url.label("product_image_url"),
+                Shop.id.label("shop_id"), Shop.shop_name,
+            )
+            .join(User, Order.client_user_id == User.id)
+            .join(Product, Order.product_id == Product.id)
+            .join(Shop, Product.shop_id == Shop.id)
+            .where(Order.id == order_id)
+        )
+        result = await session.execute(query)
+        row = result.first()
+        if row:
+            return dict(row._mapping)
+        return None
 
 
 async def update_order_status(order_id: int, status: str) -> bool:
@@ -1569,6 +1672,7 @@ async def create_order_from_cart(client_user_id: int, items: List[Dict[str, Any]
                 quantity=qty,
                 total_amount=total,
                 status="pending",
+                delivery_code=_generate_delivery_code(),
             )
             session.add(order)
             product.stock -= qty

@@ -1935,6 +1935,36 @@
                 size_hint_y: None
                 height: dp(24)
             
+            MDLabel:
+                text: "Commandes en cours"
+                bold: True
+                font_style: "Subtitle1"
+                size_hint_y: None
+                height: dp(30)
+                padding: dp(12), 0
+            
+            ScrollView:
+                size_hint_y: 0.55
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: dp(10)
+                    padding: dp(12)
+                    adaptive_height: True
+                    
+                    MDGridLayout:
+                        id: active_orders
+                        cols: 1
+                        adaptive_height: True
+                        spacing: dp(10)
+            
+            MDLabel:
+                text: "Commandes livrees"
+                bold: True
+                font_style: "Subtitle1"
+                size_hint_y: None
+                height: dp(30)
+                padding: dp(12), 0
+            
             ScrollView:
                 size_hint_y: 1
                 MDBoxLayout:
@@ -1944,7 +1974,7 @@
                     adaptive_height: True
                     
                     MDGridLayout:
-                        id: client_orders
+                        id: delivered_orders
                         cols: 1
                         adaptive_height: True
                         spacing: dp(10)

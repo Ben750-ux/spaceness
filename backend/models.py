@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 from sqlalchemy import (
     CheckConstraint, Column, DateTime, Enum, Float, ForeignKey,
-    Index, Integer, String, Text, UniqueConstraint, func,
+    Index, Integer, String, Text, UniqueConstraint, func, text,
 )
 from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, relationship
@@ -98,6 +98,7 @@ class Order(Base):
     quantity = Column(Integer, nullable=False)
     total_amount = Column(Float, nullable=False)
     status = Column(String(50), nullable=False, default="pending")
+    delivery_code = Column(String(30), nullable=True, unique=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     __table_args__ = (
@@ -256,3 +257,23 @@ class ActivityLog(Base):
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        driver = settings.db_driver
+        try:
+            if driver == "postgresql":
+                await conn.execute(text(
+                    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_code VARCHAR(30)"
+                ))
+                await conn.execute(text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_delivery_code ON orders(delivery_code)"
+                ))
+            else:
+                cols = (await conn.execute(
+                    text("PRAGMA table_info(orders)")
+                )).fetchall()
+                has_delivery = any(row[1] == "delivery_code" for row in cols)
+                if not has_delivery:
+                    await conn.execute(text(
+                        "ALTER TABLE orders ADD COLUMN delivery_code VARCHAR(30)"
+                    ))
+        except Exception:
+            pass

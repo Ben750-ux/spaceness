@@ -6,3 +6,4 @@ aiosqlite>=0.20.0
 alembic>=1.14.0
 pydantic-settings>=2.7.0
 python-multipart>=0.0.17
+qrcode[pil]>=7.4.2

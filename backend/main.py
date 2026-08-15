@@ -15,6 +15,7 @@ from urllib.error import HTTPError
 from fastapi import FastAPI, HTTPException, UploadFile, File, Request as FastRequest
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import Response
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -480,6 +481,46 @@ async def place_order(req: OrderRequest):
 async def list_client_orders(client_user_id: int):
     orders = await db.list_orders_for_client(client_user_id)
     return {"ok": True, "orders": orders}
+
+
+@app.get("/api/orders/client/{client_user_id}/active")
+async def list_active_client_orders(client_user_id: int):
+    orders = await db.list_active_orders_for_client(client_user_id)
+    return {"ok": True, "orders": orders}
+
+
+@app.get("/api/orders/qr/{order_id}")
+async def order_qr(order_id: int):
+    order = await db.get_order_delivery_info(order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Commande introuvable")
+    delivery_code = order.get("delivery_code") or f"SP-{order_id:06d}"
+    qr_text = f"SPACENESS|ORDER:{order_id}|CODE:{delivery_code}"
+    try:
+        import io
+        import qrcode
+        img = qrcode.make(qr_text)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        return Response(content=buf.getvalue(), media_type="image/png")
+    except ImportError:
+        return {"ok": True, "code": delivery_code, "qr": qr_text}
+
+
+@app.get("/api/orders/lookup/{delivery_code}")
+async def lookup_order_by_code(delivery_code: str):
+    order = await db.get_order_by_delivery_code(delivery_code)
+    if not order:
+        raise HTTPException(status_code=404, detail="Code de livraison introuvable")
+    return {"ok": True, "order": order}
+
+
+@app.get("/api/orders/id/{order_id}")
+async def lookup_order_by_id(order_id: int):
+    order = await db.get_order_full_by_id(order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Commande introuvable")
+    return {"ok": True, "order": order}
 
 
 @app.post("/api/orders/update-status")

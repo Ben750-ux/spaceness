@@ -27,6 +27,7 @@ from kivymd.uix.card import MDCard
 from kivymd.uix.fitimage import FitImage
 from kivymd.uix.label import MDLabel, MDIcon
 from kivymd.uix.textfield import MDTextField
+from kivymd.uix.boxlayout import MDBoxLayout
 
 
 def _safe_img(url: str) -> str:
@@ -1105,13 +1106,15 @@ class OrdersScreen(Screen):
 
     def refresh_orders(self) -> None:
         app = App.get_running_app()
-        container = self.ids.client_orders
-        container.clear_widgets()
+        active_container = self.ids.active_orders
+        delivered_container = self.ids.delivered_orders
+        active_container.clear_widgets()
+        delivered_container.clear_widgets()
         if not app.current_user or app.current_user["role"] != "client":
             self.message = "Ecran reserve aux clients."
             return
-        rows = db.list_orders_for_client(app.current_user["id"])
-        if not rows:
+        all_rows = db.list_orders_for_client(app.current_user["id"])
+        if not all_rows:
             empty_card = MDCard(
                 orientation="vertical",
                 padding=dp(24),
@@ -1123,101 +1126,169 @@ class OrdersScreen(Screen):
             empty_card.add_widget(MDIcon(icon="clipboard-text-outline", font_size=dp(60), theme_text_color="Custom", text_color=(0.6, 0.6, 0.6, 1), size_hint=(None, None), size=(dp(60), dp(60)), pos_hint={"center_x": 0.5}))
             empty_card.add_widget(MDLabel(text="Aucune commande", theme_text_color="Secondary", font_style="Subtitle1", halign="center", size_hint_y=None, height=dp(30)))
             empty_card.add_widget(MDLabel(text="Vos commandes apparaîtront ici", theme_text_color="Hint", font_size="12sp", halign="center", size_hint_y=None, height=dp(24)))
-            container.add_widget(empty_card)
+            active_container.add_widget(empty_card)
             return
-        for row in rows:
-            card = MDCard(
-                orientation="horizontal",
-                padding=dp(12),
-                spacing=dp(12),
+        delivered = [r for r in all_rows if str(r["status"]).lower() in ("delivered", "cancelled")]
+        active = [r for r in all_rows if r not in delivered]
+        for row in active:
+            active_container.add_widget(self._build_order_card(row, show_qr=True))
+        for row in delivered:
+            delivered_container.add_widget(self._build_order_card(row, show_qr=False))
+        self.message = f"{len(active)} en cours, {len(delivered)} livree(s)."
+
+    def _build_order_card(self, row: Dict[str, Any], show_qr: bool) -> MDCard:
+        card = MDCard(
+            orientation="horizontal",
+            padding=dp(12),
+            spacing=dp(12),
+            size_hint_y=None,
+            height=dp(130),
+            radius=[12, 12, 12, 12],
+            elevation=2,
+            md_bg_color=(1, 1, 1, 1),
+        )
+        img_src = _safe_img(row.get("product_image_url", ""))
+        card.add_widget(
+            FitImage(
+                source=img_src,
+                size_hint=(None, None),
+                size=(dp(100), dp(100)),
+                radius=[8, 8, 8, 8],
+            )
+        )
+        info = BoxLayout(orientation="vertical", spacing=dp(2), size_hint_x=1)
+        info.add_widget(
+            MDLabel(
+                text=f"Commande #{row['id']}",
+                bold=True,
+                font_size="13sp",
                 size_hint_y=None,
-                height=dp(130),
-                radius=[12, 12, 12, 12],
-                elevation=2,
-                md_bg_color=(1, 1, 1, 1),
+                height=dp(22),
             )
-            img_src = _safe_img(row.get("product_image_url", ""))
-            card.add_widget(
-                FitImage(
-                    source=img_src,
-                    size_hint=(None, None),
-                    size=(dp(100), dp(100)),
-                    radius=[8, 8, 8, 8],
-                )
+        )
+        info.add_widget(
+            Label(
+                text=row["product_name"],
+                size_hint_y=None,
+                height=dp(20),
+                font_size="12sp",
+                bold=True,
+                color=(0.1, 0.1, 0.1, 1),
+                text_size=(None, None),
+                halign="left",
+                valign="middle",
             )
-            info = BoxLayout(orientation="vertical", spacing=dp(2), size_hint_x=1)
-            info.add_widget(
-                MDLabel(
-                    text=f"Commande #{row['id']}",
-                    bold=True,
-                    font_size="13sp",
-                    size_hint_y=None,
-                    height=dp(22),
-                )
+        )
+        info.add_widget(
+            Label(
+                text=f"{row['shop_name']}",
+                size_hint_y=None,
+                height=dp(18),
+                font_size="11sp",
+                color=(0.5, 0.5, 0.5, 1),
+                halign="left",
             )
-            info.add_widget(
-                Label(
-                    text=row["product_name"],
-                    size_hint_y=None,
-                    height=dp(20),
-                    font_size="12sp",
-                    bold=True,
-                    color=(0.1, 0.1, 0.1, 1),
-                    text_size=(None, None),
-                    halign="left",
-                    valign="middle",
-                )
+        )
+        info.add_widget(
+            Label(
+                text=f"Qte: {row['quantity']} - {row['total_amount']:.2f} cr",
+                size_hint_y=None,
+                height=dp(18),
+                font_size="11sp",
+                color=(0.4, 0.4, 0.4, 1),
+                halign="left",
             )
-            info.add_widget(
-                Label(
-                    text=f"{row['shop_name']}",
-                    size_hint_y=None,
-                    height=dp(18),
-                    font_size="11sp",
-                    color=(0.5, 0.5, 0.5, 1),
-                    halign="left",
-                )
+        )
+        status = row["status"]
+        status_colors = {
+            "pending": (0.9, 0.7, 0.1, 1),
+            "confirmed": (0.13, 0.59, 0.95, 1),
+            "shipped": (0.5, 0.3, 0.9, 1),
+            "delivered": (0.2, 0.7, 0.3, 1),
+            "cancelled": (0.8, 0.2, 0.2, 1)
+        }
+        status_color = status_colors.get(status.lower(), (0.5, 0.5, 0.5, 1))
+        info.add_widget(
+            MDLabel(
+                text=status.capitalize(),
+                theme_text_color="Custom",
+                text_color=status_color,
+                font_size="11sp",
+                bold=True,
+                size_hint_y=None,
+                height=dp(20),
             )
-            info.add_widget(
-                Label(
-                    text=f"Qte: {row['quantity']} - {row['total_amount']:.2f} cr",
-                    size_hint_y=None,
-                    height=dp(18),
-                    font_size="11sp",
-                    color=(0.4, 0.4, 0.4, 1),
-                    halign="left",
-                )
-            )
-            status = row["status"]
-            status_colors = {
-                "pending": (0.9, 0.7, 0.1, 1),
-                "confirmed": (0.13, 0.59, 0.95, 1),
-                "shipped": (0.5, 0.3, 0.9, 1),
-                "delivered": (0.2, 0.7, 0.3, 1),
-                "cancelled": (0.8, 0.2, 0.2, 1)
-            }
-            status_color = status_colors.get(status.lower(), (0.5, 0.5, 0.5, 1))
-            info.add_widget(
-                MDLabel(
-                    text=status.capitalize(),
-                    theme_text_color="Custom",
-                    text_color=status_color,
-                    font_size="11sp",
-                    bold=True,
-                    size_hint_y=None,
-                    height=dp(20),
-                )
-            )
-            card.add_widget(info)
-            pid = int(row["product_id"])
-            actions = BoxLayout(orientation="vertical", size_hint_x=None, width=dp(44), spacing=dp(4))
-            btn_det = MDIconButton(icon="eye-outline", theme_text_color="Primary", on_release=lambda *_a, p=pid: App.get_running_app().open_product_details(p))
+        )
+        card.add_widget(info)
+        pid = int(row["product_id"])
+        actions = BoxLayout(orientation="vertical", size_hint_x=None, width=dp(44), spacing=dp(4))
+        btn_det = MDIconButton(icon="eye-outline", theme_text_color="Primary", on_release=lambda *_a, p=pid: App.get_running_app().open_product_details(p))
+        actions.add_widget(btn_det)
+        if show_qr:
+            order_id = int(row["id"])
+            delivery_code = row.get("delivery_code") or f"SP-{order_id:06d}"
+            btn_qr = MDIconButton(icon="qrcode", theme_text_color="Primary", on_release=lambda *_a, oid=order_id, dc=delivery_code: self.show_order_qr(oid, dc))
+            actions.add_widget(btn_qr)
+        else:
             btn_shop = MDIconButton(icon="store-outline", theme_text_color="Secondary", on_release=lambda *_a, s=int(row["shop_id"]): App.get_running_app().open_shop(s))
-            actions.add_widget(btn_det)
             actions.add_widget(btn_shop)
-            card.add_widget(actions)
-            container.add_widget(card)
-        self.message = f"{len(rows)} commande(s)."
+        card.add_widget(actions)
+        return card
+
+    def show_order_qr(self, order_id: int, delivery_code: str = "") -> None:
+        qr_url = db.order_qr_url(order_id)
+        content = MDBoxLayout(
+            orientation="vertical",
+            spacing=dp(12),
+            size_hint_y=None,
+            height=dp(400),
+            adaptive_width=True,
+            padding=dp(16),
+        )
+        content.add_widget(
+            FitImage(
+                source=qr_url,
+                size_hint=(None, None),
+                size=(dp(260), dp(260)),
+                pos_hint={"center_x": 0.5},
+                radius=[12, 12, 12, 12],
+            )
+        )
+        content.add_widget(
+            MDLabel(
+                text=f"Commande #{order_id}",
+                bold=True,
+                font_style="Subtitle1",
+                halign="center",
+                size_hint_y=None,
+                height=dp(26),
+            )
+        )
+        content.add_widget(
+            MDLabel(
+                text=f"Code de livraison : {delivery_code}",
+                theme_text_color="Secondary",
+                halign="center",
+                size_hint_y=None,
+                height=dp(24),
+            )
+        )
+        content.add_widget(
+            MDLabel(
+                text="Presentez ce code au livreur ou a l'admin pour retirer votre commande.",
+                theme_text_color="Hint",
+                font_size="12sp",
+                halign="center",
+                size_hint_y=None,
+                height=dp(36),
+            )
+        )
+        dlg = MDDialog(
+            type="custom",
+            content_cls=content,
+            buttons=[MDFlatButton(text="Fermer", on_release=lambda *_: dlg.dismiss())],
+        )
+        dlg.open()
 
 
 class AccountScreen(Screen):
