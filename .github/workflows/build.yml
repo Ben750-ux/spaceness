@@ -11,6 +11,7 @@ on:
       - 'broker/**'
       - 'requirements.txt'
       - 'buildozer.spec'
+      - '.github/workflows/build.yml'
 
 jobs:
   build:
