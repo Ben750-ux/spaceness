@@ -1,10 +1,10 @@
-name: Build APK
+name: Build APK Spaceness
 
 on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Récupérer le code
@@ -15,24 +15,38 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Installer les dépendances système obligatoires
+      - name: Configurer Java (Requis pour Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Installer les dépendances système
         run: |
           sudo apt-get update
-          sudo apt-get install -y libffi-dev libssl-dev autoconf automake libtool pkg-config zlib1g-dev ccache
+          sudo apt-get install -y libffi-dev libssl-dev autoconf automake libtool pkg-config zlib1g-dev ccache tools
 
-      - name: Installer Buildozer (version stable)
+      - name: Installer Buildozer et Cython compatibles
         run: |
           pip install --upgrade pip
           pip install cython==0.29.36
-          pip install "buildozer>=1.5.0"
+          pip install "buildozer==1.5.0"
 
-      - name: Lancer la compilation de l'APK
+      - name: Ajuster automatiquement la configuration Android et compiler
         run: |
+          # Ces commandes corrigent à la volée le fichier buildozer.spec pour éviter le crash API 33
+          if [ -f buildozer.spec ]; then
+            sed -i 's/^#\? \?android.api =.*/android.api = 31/' buildozer.spec
+            sed -i 's/^#\? \?android.ndk =.*/android.ndk = 25b/' buildozer.spec
+            sed -i 's/^#\? \?android.minapi =.*/android.minapi = 21/' buildozer.spec
+          fi
+          
+          export JAVA_HOME=$JAVA_HOME_17_X64
           yes | buildozer android debug
-
+          
       - name: Télécharger l'APK générée
         uses: actions/upload-artifact@v4
         with:
-          name: Mon-Application-APK
+          name: Spaceness-APK
           path: bin/*.apk
           
