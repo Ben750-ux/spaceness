@@ -1053,6 +1053,30 @@ async def get_notifications() -> Dict[str, int]:
     }
 
 
+async def mark_all_client_messages_read() -> bool:
+    try:
+        async with async_session() as session:
+            await session.execute(
+                update(AdminMessage).where(AdminMessage.is_read == 0).values(is_read=1)
+            )
+            await session.commit()
+        return True
+    except Exception:
+        return False
+
+
+async def mark_all_vendor_messages_read() -> bool:
+    try:
+        async with async_session() as session:
+            await session.execute(
+                update(VendorAdminMessage).where(VendorAdminMessage.is_read == 0).values(is_read=1)
+            )
+            await session.commit()
+        return True
+    except Exception:
+        return False
+
+
 # ============ APP SETTINGS ============
 async def get_app_settings() -> Dict[str, Any]:
     async with async_session() as session:

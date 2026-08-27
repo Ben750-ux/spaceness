@@ -974,6 +974,18 @@ async def admin_notifications():
     return {"ok": True, **notifications}
 
 
+@app.post("/api/admin/messages/mark-all-read")
+async def mark_all_messages_read():
+    ok = await db.mark_all_client_messages_read()
+    return {"ok": ok}
+
+
+@app.post("/api/admin/vendor-messages/mark-all-read")
+async def mark_all_vendor_messages_read():
+    ok = await db.mark_all_vendor_messages_read()
+    return {"ok": ok}
+
+
 # ============ PARAMÈTRES APP ============
 @app.get("/api/app-settings")
 async def get_app_settings():
