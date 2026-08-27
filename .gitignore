@@ -7,3 +7,12 @@ __pycache__/
 dist/
 build/
 .venv/
+bin/
+*.apk
+buildozer.log
+.gradle/
+*.log
+loading_preview.png
+placeholder_logo.png
+null
+inspect_db.py
