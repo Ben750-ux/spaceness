@@ -85,11 +85,21 @@ jobs:
             echo "Buildozer failed after $max attempts"
             echo "--- Last 200 lines of p4a build.log ---"
             tail -n 200 ./.buildozer/android/platform/python-for-android/build.log 2>/dev/null || true
+            # exporter le log complet pour diagnostic
+            cp ./.buildozer/android/platform/python-for-android/build.log ./py-build.log 2>/dev/null || true
             exit 1
           fi
 
       - name: Uploader l'APK
         uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: apk-spaceness
           path: bin/*.apk
+
+      - name: Uploader le log de build (diagnostic)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: py-build-log
+          path: py-build.log
