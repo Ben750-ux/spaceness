@@ -51,9 +51,25 @@ jobs:
             autoconf automake libtool pkg-config gcc make git\
             openjdk-17-jdk unzip
 
+      - name: Pre-telecharger les sources (contourne les 502 Savannah/GNU)
+        run: |
+          set -e
+          # Savannah (download.savannah.gnu.org) renvoie 502 depuis GitHub Actions.
+          # On fournit les sources de freetype depuis le depot GitHub officiel via le
+          # mecanisme P4A_*_DIR de p4a (copie des sources au lieu de les telecharger).
+          mkdir -p .buildozer/sources
+          echo "=== Clone de freetype 2.14.1 depuis GitHub ==="
+          git clone --depth 1 --branch VER-2-14-1 \
+            https://github.com/freetype/freetype.git \
+            .buildozer/sources/freetype
+          echo "=== Sources freetype pretees ==="
+          ls .buildozer/sources/freetype | head
+
       - name: Builder l'APK (avec essais et logs verbeux)
         run: |
           cd "$GITHUB_WORKSPACE"
+          # Sources locales fournies a p4a pour contourner les 502 Savannah/GNU
+          export P4A_FREETYPE_DIR="$GITHUB_WORKSPACE/.buildozer/sources/freetype"
           n=0
           max=3
           until [ $n -ge $max ]
