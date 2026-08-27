@@ -24,7 +24,7 @@ jobs:
       - name: Installer les dépendances système
         run: |
           sudo apt-get update
-          sudo apt-get install -y libffi-dev libssl-dev autoconf automake libtool pkg-config zlib1g-dev ccache tools
+          sudo apt-get install -y libffi-dev libssl-dev autoconf automake libtool pkg-config zlib1g-dev ccache
 
       - name: Installer Buildozer et Cython compatibles
         run: |
@@ -34,7 +34,6 @@ jobs:
 
       - name: Ajuster automatiquement la configuration Android et compiler
         run: |
-          # Ces commandes corrigent à la volée le fichier buildozer.spec pour éviter le crash API 33
           if [ -f buildozer.spec ]; then
             sed -i 's/^#\? \?android.api =.*/android.api = 31/' buildozer.spec
             sed -i 's/^#\? \?android.ndk =.*/android.ndk = 25b/' buildozer.spec
