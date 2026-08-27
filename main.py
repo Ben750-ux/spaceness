@@ -14,13 +14,13 @@ from kivy.lang import Builder
 from kivy.properties import BooleanProperty, DictProperty, NumericProperty, StringProperty
 from kivy.metrics import dp
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.filechooser import FileChooserListView
 from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.screenmanager import Screen, ScreenManager
 from kivy.uix.widget import Widget
 from kivymd.app import MDApp
+from kivymd.color_definitions import colors
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton, MDIconButton, MDRaisedButton
 from kivymd.uix.card import MDCard
@@ -42,7 +42,7 @@ def _safe_img(url: str) -> str:
 
 import api_client as db
 
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.0.1"
 
 
 def _parse_version(v: str) -> tuple:
@@ -655,6 +655,10 @@ class MarketScreen(Screen):
     def close_drawer(self) -> None:
         self.ids.market_drawer.set_state("close")
 
+    def refresh_products(self) -> None:
+        """Recharge la liste des produits du marche."""
+        self._load_products_async()
+
     def nav_to_market(self) -> None:
         self.close_drawer()
         self.refresh_products()
@@ -666,6 +670,11 @@ class MarketScreen(Screen):
     def nav_logout(self) -> None:
         self.close_drawer()
         App.get_running_app().logout()
+
+    def nav_help(self) -> None:
+        self.close_drawer()
+        import webbrowser
+        webbrowser.open(os.environ.get("HELP_URL", "https://spaceness-sitevitrine.netlify.app/#help"))
 
 
 class SearchScreen(Screen):
@@ -824,11 +833,11 @@ class ShopScreen(Screen):
         btn = self.ids.subscribe_btn
         if self.is_subscribed:
             btn.text = "Abonné"
-            btn.md_bg_color = (0.2, 0.8, 0.4, 1)  # Vert
+            btn.md_bg_color = (0.063, 0.725, 0.506, 1)  # Vert #10b981
             btn.text_color = (1, 1, 1, 1)  # Blanc
         else:
             btn.text = "S'abonner"
-            btn.md_bg_color = (0.13, 0.59, 0.95, 1)  # Bleu
+            btn.md_bg_color = (0, 0.624, 0.89, 1)  # Bleu #009fe3
             btn.text_color = (1, 1, 1, 1)  # Blanc
     
     def toggle_subscription(self) -> None:
@@ -1068,7 +1077,7 @@ class CartScreen(Screen):
                     size_hint_y=None,
                     height=dp(22),
                     bold=True,
-                    color=(0.13, 0.59, 0.95, 1),
+                    color=(0, 0.624, 0.89, 1),
                     halign="left",
                 )
             )
@@ -1095,7 +1104,48 @@ class CartScreen(Screen):
         self.refresh_cart()
 
     def commander(self) -> None:
-        App.get_running_app().show_commande_confirm_dialog()
+        app = App.get_running_app()
+        if not app.cart:
+            return
+        if not app.current_user or app.current_user["role"] != "client":
+            return
+        app.root.current = "checkout"
+
+
+class CheckoutScreen(Screen):
+    message = StringProperty("")
+
+    def on_pre_enter(self) -> None:
+        app = App.get_running_app()
+        user = app.current_user or {}
+        self.ids.checkout_phone.text = user.get("phone", "")
+        self.message = ""
+
+    def confirm_order(self) -> None:
+        app = App.get_running_app()
+        quartier = self.ids.checkout_quartier.text.strip()
+        detail = self.ids.checkout_address_detail.text.strip()
+        phone = self.ids.checkout_phone.text.strip()
+
+        if not quartier:
+            self.message = "Veuillez renseigner votre quartier."
+            return
+        if not phone or len(phone) < 9:
+            self.message = "Numero de telephone invalide (min. 9 chiffres)."
+            return
+
+        full_address = f"{quartier}"
+        if detail:
+            full_address += f" - {detail}"
+        full_address += ", Lubumbashi"
+
+        self.message = ""
+        ok, msg = app._execute_checkout_orders(delivery_address=full_address, delivery_phone=phone)
+        if ok:
+            app.root.current = "orders"
+            app.root.get_screen("orders").refresh_orders()
+        else:
+            self.message = msg
 
 
 class OrdersScreen(Screen):
@@ -1202,7 +1252,7 @@ class OrdersScreen(Screen):
         status = row["status"]
         status_colors = {
             "pending": (0.9, 0.7, 0.1, 1),
-            "confirmed": (0.13, 0.59, 0.95, 1),
+            "confirmed": (0, 0.624, 0.89, 1),
             "shipped": (0.5, 0.3, 0.9, 1),
             "delivered": (0.2, 0.7, 0.3, 1),
             "cancelled": (0.8, 0.2, 0.2, 1)
@@ -1233,6 +1283,7 @@ class OrdersScreen(Screen):
             btn_shop = MDIconButton(icon="store-outline", theme_text_color="Secondary", on_release=lambda *_a, s=int(row["shop_id"]): App.get_running_app().open_shop(s))
             actions.add_widget(btn_shop)
         card.add_widget(actions)
+
         return card
 
     def show_order_qr(self, order_id: int, delivery_code: str = "") -> None:
@@ -1314,20 +1365,41 @@ class AccountScreen(Screen):
             return
         user = db.get_user_by_id(app.current_user["id"])
         print(f"DEBUG: user récupéré = {user}")
-        if user:
-            print(f"DEBUG: Mise à jour des champs avec ids={self.ids.keys()}")
-            self.ids.acc_name.text = user.get("full_name", "")
-            self.ids.acc_email.text = user.get("email", "")
-            self.ids.acc_phone.text = user.get("phone", "")
-            self.ids.acc_address.text = user.get("address", "")
-            self.ids.acc_birth_date.text = user.get("birth_date", "")
-            self.ids.acc_gender.text = user.get("gender", "")
-            # Mettre à jour l'en-tête
-            self.ids.profile_name_header.text = user.get("full_name", "Utilisateur")
-            self.ids.profile_email_header.text = user.get("email", "")
-            print("DEBUG: Champs mis à jour avec succès")
-        else:
+        if not user:
             print("DEBUG: Utilisateur non trouvé en base")
+            return
+        print(f"DEBUG: Mise à jour des champs avec ids={self.ids.keys()}")
+        full_name = user.get("full_name", "")
+        self.ids.acc_name.text = full_name
+        self.ids.acc_email.text = user.get("email", "")
+        self.ids.acc_phone.text = user.get("phone", "")
+        self.ids.acc_address.text = user.get("address", "")
+        # En-tête
+        self.ids.profile_name_header.text = full_name or "Utilisateur"
+        self.ids.profile_email_header.text = user.get("email", "")
+        self.ids.avatar_initial.text = (full_name or "U")[0].upper()
+        # Rôle
+        role_map = {"client": "Client", "vendeur": "Vendeur", "admin": "Admin"}
+        self.ids.profile_role_header.text = role_map.get(
+            user.get("role", ""), user.get("role", "").title()
+        )
+        # Date de naissance — masquer si vide
+        birth = user.get("birth_date", "") or ""
+        self.ids.acc_birth_date.text = birth
+        row_b = self.ids.row_birth_date
+        if birth.strip():
+            row_b.height = dp(48)
+            row_b.opacity = 1
+            row_b.disabled = False
+        # Genre — masquer si vide
+        gender = user.get("gender", "") or ""
+        self.ids.acc_gender.text = gender
+        row_g = self.ids.row_gender
+        if gender.strip():
+            row_g.height = dp(48)
+            row_g.opacity = 1
+            row_g.disabled = False
+        print("DEBUG: Champs mis à jour avec succès")
     
     def save_profile(self) -> None:
         app = App.get_running_app()
@@ -1360,14 +1432,15 @@ class ContactAdminScreen(Screen):
             return
         messages = db.get_user_messages(app.current_user["id"])
         messages_dict = [dict(m) for m in messages]
-        unread_notifications = [m for m in messages_dict if (m["is_from_admin"] or m["admin_reply"]) and not m["is_read"]]
-        if unread_notifications:
+        unread_replies = [m for m in messages_dict if m.get("admin_reply") and not m.get("is_read")]
+        if unread_replies:
             app.admin_notification = True
-            self._show_reply_notification(len(unread_notifications))
-            for msg in unread_notifications:
+            self._show_reply_notification(len(unread_replies))
+            for msg in unread_replies:
                 db.mark_message_read(msg["id"])
         else:
             app.admin_notification = False
+        app.notif_badge_count = 0
         app._last_notif_count = 0
     
     def refresh_messages(self) -> None:
@@ -1418,7 +1491,7 @@ class ContactAdminScreen(Screen):
                 card.add_widget(MDLabel(
                     text=f"Réponse admin: {msg['admin_reply']}",
                     theme_text_color="Custom",
-                    text_color=(0.13, 0.59, 0.95, 1),
+                    text_color=(0, 0.624, 0.89, 1),
                     font_size="11sp",
                     bold=True,
                     size_hint_y=None,
@@ -1604,8 +1677,10 @@ class ShopMobileApp(MDApp):
     qty_value = StringProperty("1")
     cart_badge_count = NumericProperty(0)
     _info_dialog: Optional[MDDialog] = None
+    _notif_dialog: Optional[MDDialog] = None
     dark_mode = BooleanProperty(False)
     admin_notification = BooleanProperty(False)
+    notif_badge_count = NumericProperty(0)
     _last_notif_count = 0
     pending_user_id: Optional[int] = None
     pending_code: Optional[str] = None
@@ -1619,6 +1694,7 @@ class ShopMobileApp(MDApp):
     def build(self):
         db.init_db()
         self.theme_cls.theme_style = "Light"
+        colors["Blue"]["500"] = "009fe3"  # Bleu #009fe3 (avant selection de la palette)
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.accent_palette = "Amber"
         self.title = "Spaceness - Marketplace"
@@ -1632,55 +1708,69 @@ class ShopMobileApp(MDApp):
     
     def on_start(self) -> None:
         self.root.current = "loading"
-        Clock.schedule_interval(lambda dt: self.check_notifications(), 30)
+        Clock.schedule_interval(lambda dt: self.check_notifications(), 10)
         Clock.schedule_interval(lambda dt: self.check_blocked(), 60)
         Clock.schedule_once(lambda dt: self.check_blocked(), 2)
+        Clock.schedule_once(lambda dt: self.check_notifications(), 5)
     
     def _retry_load_session(self, dt) -> None:
         self._debug_log("_retry_load_session: retrying...")
-        if not self._verify_session():
+        if not self._try_restore_session():
             self._debug_log("_retry_load_session: still FAIL -> login screen")
             self.root.current = "login"
-        else:
-            self._debug_log("_retry_load_session: SUCCESS -> route_after_login")
-            self.route_after_login()
 
     def finish_loading(self) -> None:
         self._debug_log("finish_loading: start")
         threading.Thread(target=self._bg_load, daemon=True).start()
 
     def _bg_load(self) -> None:
-        settings, version_info = db.get_app_settings(), db.check_version()
+        settings: dict = {}
+        version_info: dict = {}
+        try:
+            settings = db.get_app_settings() or {}
+        except Exception as e:
+            self._debug_log(f"_bg_load: get_app_settings exception: {e}")
+        try:
+            version_info = db.check_version() or {}
+        except Exception as e:
+            self._debug_log(f"_bg_load: check_version exception: {e}")
         Clock.schedule_once(lambda dt: self._on_load_ready(settings, version_info), 0)
 
     def _on_load_ready(self, settings: dict, version_info: dict) -> None:
         self._debug_log(f"_on_load_ready: settings={settings}")
-        if settings.get("is_blocked"):
-            block_msg = settings.get("block_message", "L'application est actuellement en maintenance.")
-            self._show_blocked_dialog(block_msg)
-            return
-        if version_info:
-            current = _parse_version(APP_VERSION)
-            min_v = _parse_version(version_info.get("min_version", "0.0.0"))
-            latest_v = _parse_version(version_info.get("latest_version", "0.0.0"))
-            if min_v > current:
-                update_screen = self.root.get_screen("update")
-                update_screen.message = version_info.get("update_message", "Une version plus récente est requise pour continuer. Veuillez télécharger la mise à jour.")
-                update_screen.download_url = version_info.get("download_url", "")
-                update_screen.is_force_update = True
-                self.root.current = "update"
+        try:
+            if settings.get("is_blocked"):
+                block_msg = settings.get("block_message", "L'application est actuellement en maintenance.")
+                self._show_blocked_dialog(block_msg)
                 return
-            if latest_v > current:
-                update_screen = self.root.get_screen("update")
-                update_screen.message = version_info.get("update_message", "Une nouvelle version est disponible. Téléchargez-la pour profiter des dernières fonctionnalités.")
-                update_screen.download_url = version_info.get("download_url", "")
-                update_screen.is_force_update = False
-                self.root.current = "update"
-                return
-        if self._verify_session():
-            self.route_after_login()
-        else:
-            Clock.schedule_once(self._retry_load_session, 0.3)
+            if version_info:
+                current = _parse_version(APP_VERSION)
+                min_v = _parse_version(version_info.get("min_version", "0.0.0"))
+                latest_v = _parse_version(version_info.get("latest_version", "0.0.0"))
+                if min_v > current or latest_v > current:
+                    update_screen = self.root.get_screen("update")
+                    update_screen.message = version_info.get(
+                        "update_message",
+                        "Une nouvelle version est requise." if min_v > current else "Une nouvelle version est disponible.",
+                    )
+                    update_screen.download_url = version_info.get("download_url", "")
+                    update_screen.is_force_update = min_v > current
+                    self.root.current = "update"
+                    return
+        except Exception as e:
+            self._debug_log(f"_on_load_ready: exception dans checks bloquage/version: {e}")
+        # Restauration de session : toujours tentee, jamais bloquee par les checks reseau
+        if not self._try_restore_session():
+            Clock.schedule_once(self._retry_load_session, 1)
+
+    def _try_restore_session(self) -> bool:
+        try:
+            if self._verify_session():
+                self.route_after_login()
+                return True
+        except Exception as e:
+            self._debug_log(f"_try_restore_session: exception: {e}")
+        return False
     
     def check_blocked(self) -> None:
         db.api_async(db.get_app_settings, self._on_block_check)
@@ -1718,29 +1808,89 @@ class ShopMobileApp(MDApp):
     
     def check_notifications(self) -> None:
         if not self.current_user:
-            self.admin_notification = False
             return
-        db.api_async(db.get_user_messages, self._on_notif_result, self.current_user["id"])
-    
+        try:
+            uid = self.current_user["id"]
+            self._debug_log(f"check_notifications: polling for user {uid}")
+            db.api_async(db.get_user_messages, self._on_notif_result, uid)
+        except Exception as e:
+            self._debug_log(f"check_notifications: ERROR {e}")
+
     def _on_notif_result(self, messages) -> None:
         Clock.schedule_once(lambda dt: self._process_notif_result(messages))
-    
+
     def _process_notif_result(self, messages) -> None:
+        if messages is None:
+            self._debug_log("_process_notif_result: messages is None (API failed)")
+            return
         messages_dict = [dict(m) for m in messages] if messages else []
-        unread = [m for m in messages_dict if (m.get("is_from_admin") or m.get("admin_reply")) and not m.get("is_read")]
+        unread = [
+            m for m in messages_dict
+            if m.get("admin_reply") and not m.get("is_read")
+        ]
         count = len(unread)
+        self._debug_log(f"_process_notif_result: total={len(messages_dict)}, unread_replies={count}, last={self._last_notif_count}")
         self.admin_notification = count > 0
+        self.notif_badge_count = count
         if count > self._last_notif_count:
             self._show_notif_popup(count - self._last_notif_count)
         self._last_notif_count = count
-    
-    def _show_notif_popup(self, count: int) -> None:
-        msg = "nouveau message" if count == 1 else f"{count} nouveaux messages"
+
+    def _show_notif_popup(self, new_count: int) -> None:
+        msg = "nouveau message" if new_count == 1 else f"{new_count} nouveaux messages"
         try:
-            from kivymd.uix.snackbar import Snackbar
-            Snackbar(text=f"📩 {msg} de l'administrateur", duration=4).open()
-        except Exception:
-            pass
+            from kivymd.uix.boxlayout import MDBoxLayout
+            from kivymd.uix.label import MDLabel
+
+            content = MDBoxLayout(
+                orientation="vertical",
+                spacing=dp(12),
+                padding=[dp(8), dp(8), dp(8), dp(4)],
+                size_hint_y=None,
+                height=dp(80),
+            )
+            content.add_widget(MDLabel(
+                text=f"L'administrateur vous a envoye {msg}.",
+                theme_text_color="Custom",
+                text_color=(0.2, 0.2, 0.2, 1),
+                font_style="Body1",
+                size_hint_y=None,
+                height=dp(40),
+            ))
+            content.add_widget(MDLabel(
+                text="Consultez votre messagerie pour plus de details.",
+                theme_text_color="Secondary",
+                font_style="Caption",
+                size_hint_y=None,
+                height=dp(24),
+            ))
+
+            if self._notif_dialog:
+                self._notif_dialog.dismiss()
+            self._notif_dialog = MDDialog(
+                title="[color=#009fe3]Nouvelle notification[/color]",
+                type="custom",
+                content_cls=content,
+                buttons=[
+                    MDRaisedButton(
+                        text="Voir",
+                        md_bg_color=(0, 0.624, 0.89, 1),
+                        text_color=(1, 1, 1, 1),
+                        on_release=lambda *x: (
+                            self._notif_dialog.dismiss() if self._notif_dialog else None,
+                            setattr(self.root, "current", "contact_admin"),
+                        ),
+                    ),
+                    MDRaisedButton(
+                        text="Plus tard",
+                        on_release=lambda *x: self._notif_dialog.dismiss() if self._notif_dialog else None,
+                    ),
+                ],
+            )
+            self._notif_dialog._real_release_on_auto_dismiss_behavior = False
+            self._notif_dialog.open()
+        except Exception as e:
+            print(f"DEBUG: Erreur popup notif: {e}")
     
     def toggle_dark_mode(self) -> None:
         """Bascule entre le mode sombre et clair"""
@@ -1769,6 +1919,7 @@ class ShopMobileApp(MDApp):
             return
         self.root.current = "market"
         self._save_session()
+        Clock.schedule_once(lambda dt: self.check_notifications(), 3)
 
     def logout(self) -> None:
         self.current_user = None
@@ -1881,11 +2032,11 @@ class ShopMobileApp(MDApp):
         )
         dlg.open()
 
-    def _execute_checkout_orders(self) -> tuple[bool, str]:
+    def _execute_checkout_orders(self, delivery_address: str = "", delivery_phone: str = "") -> tuple[bool, str]:
         if not self.cart:
             return False, "Panier vide."
         items = [{"product_id": int(i["product_id"]), "qty": int(i["qty"])} for i in self.cart]
-        ok, msg = db.create_orders_from_cart(self.current_user["id"], items)
+        ok, msg = db.create_orders_from_cart(self.current_user["id"], items, delivery_address, delivery_phone)
         self.cart = []
         self.update_cart_badge()
         return ok, msg
@@ -1924,49 +2075,6 @@ class ShopMobileApp(MDApp):
 
     def open_cart(self) -> None:
         self.root.current = "cart"
-
-    def pick_and_upload_image(self, callback) -> None:
-        content = BoxLayout(orientation="vertical", spacing=dp(10), padding=dp(10))
-        filechooser = FileChooserListView(
-            path=os.path.expanduser("~"),
-            filters=["*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.bmp"],
-        )
-        content.add_widget(filechooser)
-
-        def on_select(instance):
-            selection = filechooser.selection
-            if not selection:
-                return
-            filepath = selection[0]
-            popup.dismiss()
-            Clock.schedule_once(lambda dt: self._do_upload(filepath, callback))
-
-        btn_layout = BoxLayout(size_hint_y=None, height=dp(50), spacing=dp(10))
-        btn_layout.add_widget(MDRaisedButton(text="Choisir", on_release=on_select))
-        content.add_widget(btn_layout)
-
-        popup = Popup(
-            title="Choisir une image",
-            content=content,
-            size_hint=(0.9, 0.9),
-        )
-        popup.open()
-
-    def _do_upload(self, filepath: str, callback) -> None:
-        url = db.upload_image(filepath)
-        if url:
-            callback(url)
-            self._show_toast(f"Image uploadée: {url}")
-        else:
-            self._show_toast("Erreur lors de l'upload")
-
-    def _show_toast(self, msg: str) -> None:
-        dlg = MDDialog(
-            title="Upload",
-            text=msg,
-            buttons=[MDRaisedButton(text="OK", on_release=lambda *_: dlg.dismiss())],
-        )
-        dlg.open()
 
     def open_orders(self) -> None:
         self.root.current = "orders"

@@ -14,13 +14,13 @@ def _api_url(path: str) -> str:
     return f"{API_URL}{path}"
 
 
-def _request(method: str, url: str, data: Any = None) -> Any:
+def _request(method: str, url: str, data: Any = None, timeout: int = 10) -> Any:
     from urllib.error import HTTPError
     headers = {"Content-Type": "application/json"}
     body = json.dumps(data).encode() if data else None
     req = Request(url, data=body, headers=headers, method=method)
     try:
-        with urlopen(req, timeout=10) as resp:
+        with urlopen(req, timeout=timeout) as resp:
             return json.loads(resp.read().decode())
     except HTTPError as e:
         detail = str(e)
@@ -34,12 +34,12 @@ def _request(method: str, url: str, data: Any = None) -> Any:
         return {"ok": False, "detail": str(e)}
 
 
-def _get(path: str) -> Any:
-    return _request("GET", _api_url(path))
+def _get(path: str, timeout: int = 10) -> Any:
+    return _request("GET", _api_url(path), timeout=timeout)
 
 
-def _post(path: str, data: Any) -> Any:
-    return _request("POST", _api_url(path), data)
+def _post(path: str, data: Any, timeout: int = 10) -> Any:
+    return _request("POST", _api_url(path), data, timeout=timeout)
 
 
 def api_async(func: Callable, callback: Callable, *args, **kwargs) -> None:
@@ -240,8 +240,13 @@ def place_order(client_user_id: int, product_id: int, quantity: int) -> Tuple[bo
     return False, resp.get("detail", "Erreur.")
 
 
-def create_orders_from_cart(user_id: int, items: List[Dict[str, Any]]) -> Tuple[bool, str]:
-    resp = _post("/api/orders/from-cart", {"user_id": user_id, "items": items})
+def create_orders_from_cart(user_id: int, items: List[Dict[str, Any]], delivery_address: str = "", delivery_phone: str = "") -> Tuple[bool, str]:
+    resp = _post("/api/orders/from-cart", {
+        "user_id": user_id,
+        "items": items,
+        "delivery_address": delivery_address,
+        "delivery_phone": delivery_phone,
+    })
     if resp.get("ok"):
         return True, resp.get("message", "Commande enregistree.")
     return False, resp.get("detail", "Erreur.")
@@ -439,7 +444,7 @@ def send_admin_message(user_id: int, subject: str, message: str, is_from_admin: 
 
 
 def get_user_messages(user_id: int) -> List[Dict[str, Any]]:
-    resp = _get(f"/api/messages/{user_id}")
+    resp = _get(f"/api/messages/{user_id}", timeout=20)
     return resp.get("messages", [])
 
 

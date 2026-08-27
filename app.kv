@@ -1,6 +1,6 @@
 #:import dp kivy.metrics.dp
-# Barre haute (bleu Material 900) + texte / icones blancs
-#:set bar_blue 0.051, 0.278, 0.631, 1
+# Barre haute (bleu #009fe3) + texte / icones blancs
+#:set bar_blue 0, 0.624, 0.89, 1
 #:set bar_text 1, 1, 1, 1
 # Menu lateral (bleu nuit, assorti)
 #:set drawer_blue 0.04, 0.11, 0.26, 1
@@ -71,7 +71,7 @@
             text: root.price
             bold: True
             theme_text_color: "Custom"
-            text_color: 0.13, 0.59, 0.95, 1
+            text_color: bar_blue
             size_hint_y: None
             height: dp(20)
             font_size: "14sp"
@@ -86,7 +86,7 @@
             height: dp(32)
             MDRaisedButton:
                 text: "Details"
-                md_bg_color: 0.13, 0.59, 0.95, 1
+                md_bg_color: bar_blue
                 font_size: "11sp"
                 height: dp(32)
                 on_release: app.open_product_details(root.product_id)
@@ -397,7 +397,7 @@
 
                     MDRaisedButton:
                         text: "Continuer"
-                        md_bg_color: 0.13, 0.59, 0.95, 1
+                        md_bg_color: bar_blue
                         on_release: root.validate_step1()
                         size_hint_y: None
                         height: dp(50)
@@ -479,7 +479,7 @@
 
                     MDRaisedButton:
                         text: "Continuer"
-                        md_bg_color: 0.13, 0.59, 0.95, 1
+                        md_bg_color: bar_blue
                         on_release: root.validate_step2()
                         size_hint_y: None
                         height: dp(50)
@@ -585,7 +585,7 @@
 
                     MDRaisedButton:
                         text: "Continuer"
-                        md_bg_color: 0.13, 0.59, 0.95, 1
+                        md_bg_color: bar_blue
                         on_release: root.validate_step3()
                         size_hint_y: None
                         height: dp(50)
@@ -656,7 +656,7 @@
 
                     MDRaisedButton:
                         text: "Continuer"
-                        md_bg_color: 0.13, 0.59, 0.95, 1
+                        md_bg_color: bar_blue
                         on_release: root.validate_step5()
                         size_hint_y: None
                         height: dp(50)
@@ -778,7 +778,7 @@
 
                     MDRaisedButton:
                         text: "Créer mon compte"
-                        md_bg_color: 0.13, 0.59, 0.95, 1
+                        md_bg_color: bar_blue
                         on_release: root.validate_step6()
                         size_hint_y: None
                         height: dp(50)
@@ -817,6 +817,29 @@
                             size_hint_x: 1
                             halign: "left"
                             valign: "center"
+                        FloatLayout:
+                            size_hint: None, None
+                            size: dp(48), dp(48)
+                            MDIconButton:
+                                icon: "bell-outline"
+                                theme_text_color: "Custom"
+                                text_color: bar_text
+                                pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                                on_release: app.root.current = "contact_admin"
+                            MDLabel:
+                                text: str(app.notif_badge_count) if app.notif_badge_count else ""
+                                size_hint: None, None
+                                size: dp(18), dp(18)
+                                halign: "center"
+                                valign: "middle"
+                                font_style: "Caption"
+                                bold: True
+                                theme_text_color: "Custom"
+                                text_color: 1, 1, 1, 1
+                                md_bg_color: 0.88, 0.16, 0.22, 1
+                                radius: [9, 9, 9, 9]
+                                pos_hint: {"right": 0.98, "top": 0.95}
+                                opacity: 1 if app.notif_badge_count else 0
                         FloatLayout:
                             size_hint: None, None
                             size: dp(48), dp(48)
@@ -930,112 +953,164 @@
 
                 MDSeparator:
 
-                MDList:
-                    OneLineIconListItem:
-                        text: "Accueil"
-                        theme_text_color: "Custom"
-                        text_color: 0.95, 0.96, 1, 1
-                        on_release: root.nav_to_market()
-                        IconLeftWidget:
-                            icon: "home"
+                ScrollView:
+                    MDList:
+                        padding: dp(4), dp(0)
+
+                        MDLabel:
+                            text: "Navigation"
+                            font_style: "Caption"
+                            bold: True
                             theme_text_color: "Custom"
-                            text_color: 0.75, 0.87, 1, 1
-                    OneLineIconListItem:
-                        text: "Recherche"
-                        theme_text_color: "Custom"
-                        text_color: 0.95, 0.96, 1, 1
-                        on_release:
-                            root.close_drawer()
-                            app.open_search_screen("")
-                        IconLeftWidget:
-                            icon: "magnify"
+                            text_color: 0.55, 0.65, 0.85, 1
+                            adaptive_height: True
+                            padding: dp(16), dp(4)
+
+                        OneLineIconListItem:
+                            text: "Accueil"
                             theme_text_color: "Custom"
-                            text_color: 0.75, 0.87, 1, 1
-                    OneLineIconListItem:
-                        text: "Panier"
-                        theme_text_color: "Custom"
-                        text_color: 0.95, 0.96, 1, 1
-                        on_release: root.nav_to_cart()
-                        IconLeftWidget:
-                            icon: "cart"
+                            text_color: 0.95, 0.96, 1, 1
+                            on_release: root.nav_to_market()
+                            IconLeftWidget:
+                                icon: "home"
+                                theme_text_color: "Custom"
+                                text_color: 0.75, 0.87, 1, 1
+                        OneLineIconListItem:
+                            text: "Recherche"
                             theme_text_color: "Custom"
-                            text_color: 0.75, 0.87, 1, 1
-                    OneLineIconListItem:
-                        text: "Mes commandes"
-                        theme_text_color: "Custom"
-                        text_color: 0.95, 0.96, 1, 1
-                        on_release:
-                            root.close_drawer()
-                            app.open_orders()
-                        IconLeftWidget:
-                            icon: "clipboard-list"
+                            text_color: 0.95, 0.96, 1, 1
+                            on_release:
+                                root.close_drawer()
+                                app.open_search_screen("")
+                            IconLeftWidget:
+                                icon: "magnify"
+                                theme_text_color: "Custom"
+                                text_color: 0.75, 0.87, 1, 1
+                        OneLineIconListItem:
+                            text: "Panier"
                             theme_text_color: "Custom"
-                            text_color: 0.75, 0.87, 1, 1
-                    OneLineIconListItem:
-                        text: "Mon Compte"
-                        theme_text_color: "Custom"
-                        text_color: 0.95, 0.96, 1, 1
-                        on_release:
-                            root.close_drawer()
-                            app.root.current = "account"
-                        IconLeftWidget:
-                            icon: "account-circle"
+                            text_color: 0.95, 0.96, 1, 1
+                            on_release: root.nav_to_cart()
+                            IconLeftWidget:
+                                icon: "cart"
+                                theme_text_color: "Custom"
+                                text_color: 0.75, 0.87, 1, 1
+                        OneLineIconListItem:
+                            text: "Mes commandes"
                             theme_text_color: "Custom"
-                            text_color: 0.75, 0.87, 1, 1
-                    OneLineIconListItem:
-                        text: "Contacter Admin" + (" 🔴" if app.admin_notification else "")
-                        theme_text_color: "Custom"
-                        text_color: (1, 0.5, 0.5, 1) if app.admin_notification else (0.95, 0.96, 1, 1)
-                        on_release:
-                            root.close_drawer()
-                            app.check_notifications()
-                            app.root.current = "contact_admin"
-                        IconLeftWidget:
-                            icon: "alert-circle" if app.admin_notification else "message-text-outline"
+                            text_color: 0.95, 0.96, 1, 1
+                            on_release:
+                                root.close_drawer()
+                                app.open_orders()
+                            IconLeftWidget:
+                                icon: "clipboard-list"
+                                theme_text_color: "Custom"
+                                text_color: 0.75, 0.87, 1, 1
+                        OneLineIconListItem:
+                            text: "Mes Favoris"
                             theme_text_color: "Custom"
-                            text_color: (1, 0.3, 0.3, 1) if app.admin_notification else (0.75, 0.87, 1, 1)
-                    OneLineIconListItem:
-                        text: "Mes Favoris"
-                        theme_text_color: "Custom"
-                        text_color: 0.95, 0.96, 1, 1
-                        on_release:
-                            root.close_drawer()
-                            app.root.current = "favorites"
-                        IconLeftWidget:
-                            icon: "heart"
+                            text_color: 0.95, 0.96, 1, 1
+                            on_release:
+                                root.close_drawer()
+                                app.root.current = "favorites"
+                            IconLeftWidget:
+                                icon: "heart"
+                                theme_text_color: "Custom"
+                                text_color: 0.75, 0.87, 1, 1
+
+                        MDLabel:
+                            text: "Mon compte"
+                            font_style: "Caption"
+                            bold: True
                             theme_text_color: "Custom"
-                            text_color: 0.75, 0.87, 1, 1
-                    OneLineIconListItem:
-                        text: "Historique"
-                        theme_text_color: "Custom"
-                        text_color: 0.95, 0.96, 1, 1
-                        on_release:
-                            root.close_drawer()
-                            app.root.current = "history"
-                        IconLeftWidget:
-                            icon: "history"
+                            text_color: 0.55, 0.65, 0.85, 1
+                            adaptive_height: True
+                            padding: dp(16), dp(4)
+
+                        OneLineIconListItem:
+                            text: "Mon profil"
                             theme_text_color: "Custom"
-                            text_color: 0.75, 0.87, 1, 1
-                    OneLineIconListItem:
-                        text: "Mode Sombre" if not app.dark_mode else "Mode Clair"
-                        theme_text_color: "Custom"
-                        text_color: 0.95, 0.96, 1, 1
-                        on_release:
-                            root.close_drawer()
-                            app.toggle_dark_mode()
-                        IconLeftWidget:
-                            icon: "weather-night" if not app.dark_mode else "white-balance-sunny"
+                            text_color: 0.95, 0.96, 1, 1
+                            on_release:
+                                root.close_drawer()
+                                app.root.current = "account"
+                            IconLeftWidget:
+                                icon: "account-circle"
+                                theme_text_color: "Custom"
+                                text_color: 0.75, 0.87, 1, 1
+                        OneLineIconListItem:
+                            text: "Historique"
                             theme_text_color: "Custom"
-                            text_color: 0.75, 0.87, 1, 1
-                    OneLineIconListItem:
-                        text: "Deconnexion"
-                        theme_text_color: "Custom"
-                        text_color: 0.95, 0.96, 1, 1
-                        on_release: root.nav_logout()
-                        IconLeftWidget:
-                            icon: "logout"
+                            text_color: 0.95, 0.96, 1, 1
+                            on_release:
+                                root.close_drawer()
+                                app.root.current = "history"
+                            IconLeftWidget:
+                                icon: "history"
+                                theme_text_color: "Custom"
+                                text_color: 0.75, 0.87, 1, 1
+                        OneLineIconListItem:
+                            text: ("[color=#ff4444][b]•[/b][/color] Contacter Admin " + str(app.notif_badge_count)) if app.notif_badge_count else "Contacter Admin"
+                            markup: True
                             theme_text_color: "Custom"
-                            text_color: 0.75, 0.87, 1, 1
+                            text_color: (1, 0.5, 0.5, 1) if app.admin_notification else (0.95, 0.96, 1, 1)
+                            on_release:
+                                root.close_drawer()
+                                app.check_notifications()
+                                app.root.current = "contact_admin"
+                            IconLeftWidget:
+                                icon: "alert-circle" if app.admin_notification else "message-text-outline"
+                                theme_text_color: "Custom"
+                                text_color: (1, 0.3, 0.3, 1) if app.admin_notification else (0.75, 0.87, 1, 1)
+
+                        MDLabel:
+                            text: "Support"
+                            font_style: "Caption"
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: 0.55, 0.65, 0.85, 1
+                            adaptive_height: True
+                            padding: dp(16), dp(4)
+
+                        OneLineIconListItem:
+                            text: "Aide"
+                            theme_text_color: "Custom"
+                            text_color: 0.95, 0.96, 1, 1
+                            on_release: root.nav_help()
+                            IconLeftWidget:
+                                icon: "help-circle-outline"
+                                theme_text_color: "Custom"
+                                text_color: 0.75, 0.87, 1, 1
+
+                        MDLabel:
+                            text: "Paramètres"
+                            font_style: "Caption"
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: 0.55, 0.65, 0.85, 1
+                            adaptive_height: True
+                            padding: dp(16), dp(4)
+
+                        OneLineIconListItem:
+                            text: "Mode Sombre" if not app.dark_mode else "Mode Clair"
+                            theme_text_color: "Custom"
+                            text_color: 0.95, 0.96, 1, 1
+                            on_release:
+                                root.close_drawer()
+                                app.toggle_dark_mode()
+                            IconLeftWidget:
+                                icon: "weather-night" if not app.dark_mode else "white-balance-sunny"
+                                theme_text_color: "Custom"
+                                text_color: 0.75, 0.87, 1, 1
+                        OneLineIconListItem:
+                            text: "Deconnexion"
+                            theme_text_color: "Custom"
+                            text_color: 0.95, 0.96, 1, 1
+                            on_release: root.nav_logout()
+                            IconLeftWidget:
+                                icon: "logout"
+                                theme_text_color: "Custom"
+                                text_color: 0.75, 0.87, 1, 1
 
 <SearchScreen>:
     MDScreen:
@@ -1300,7 +1375,7 @@
                         MDRaisedButton:
                             id: subscribe_btn
                             text: "S'abonner"
-                            md_bg_color: 0.13, 0.59, 0.95, 1
+                            md_bg_color: bar_blue
                             on_release: root.toggle_subscription()
                             size_hint_y: None
                             height: dp(44)
@@ -1568,7 +1643,7 @@
                         bold: True
                         font_size: "22sp"
                         theme_text_color: "Custom"
-                        text_color: 0.13, 0.59, 0.95, 1
+                        text_color: bar_blue
                         size_hint_y: None
                         height: dp(30)
                     
@@ -1695,7 +1770,7 @@
                     MDRaisedButton:
                         id: add_review_btn
                         text: "Laisser un avis"
-                        md_bg_color: 0.13, 0.59, 0.95, 1
+                        md_bg_color: bar_blue
                         font_size: "11sp"
                         size_hint_y: None
                         height: dp(36)
@@ -1851,7 +1926,7 @@
             MDCard:
                 size_hint_y: None
                 height: dp(60)
-                md_bg_color: 0.13, 0.59, 0.95, 1
+                md_bg_color: drawer_blue
                 radius: [0, 0, 0, 0]
                 padding: dp(16)
                 MDLabel:
@@ -1895,7 +1970,7 @@
                 on_release: root.clear_cart()
             MDRaisedButton:
                 text: "Commander"
-                md_bg_color: 0.13, 0.59, 0.95, 1
+                md_bg_color: bar_blue
                 on_release: root.commander()
 
 <OrdersScreen>:
@@ -1981,9 +2056,9 @@
 
 <AccountScreen>:
     MDScreen:
+        md_bg_color: 0.95, 0.96, 0.98, 1
         MDBoxLayout:
             orientation: "vertical"
-            padding: dp(10)
             spacing: dp(8)
             MDTopAppBar:
                 title: "Mon Compte"
@@ -1994,28 +2069,39 @@
             ScrollView:
                 MDBoxLayout:
                     orientation: "vertical"
-                    spacing: dp(16)
+                    spacing: dp(14)
                     adaptive_height: True
-                    padding: dp(12)
-                    
-                    # Avatar et nom
+                    padding: dp(16)
+
+                    # Carte de profil
                     MDCard:
                         orientation: "vertical"
-                        padding: dp(20)
-                        spacing: dp(12)
+                        padding: [dp(24), dp(22), dp(24), dp(18)]
+                        spacing: dp(6)
                         size_hint_y: None
-                        height: dp(180)
-                        md_bg_color: 0.13, 0.59, 0.95, 1
-                        
-                        MDIcon:
-                            icon: "account-circle"
-                            theme_text_color: "Custom"
-                            text_color: 1, 1, 1, 1
-                            font_size: dp(80)
+                        height: self.minimum_height
+                        md_bg_color: bar_blue
+                        radius: [24, 24, 24, 24]
+                        elevation: 3
+
+                        MDCard:
+                            orientation: "vertical"
                             size_hint: None, None
-                            size: dp(80), dp(80)
+                            size: dp(88), dp(88)
+                            md_bg_color: 1, 1, 1, 0.18
+                            radius: [44, 44, 44, 44]
                             pos_hint: {"center_x": 0.5}
-                        
+                            elevation: 0
+                            MDLabel:
+                                id: avatar_initial
+                                text: "U"
+                                theme_text_color: "Custom"
+                                text_color: 1, 1, 1, 1
+                                font_style: "H2"
+                                bold: True
+                                halign: "center"
+                                valign: "middle"
+
                         MDLabel:
                             id: profile_name_header
                             text: "Utilisateur"
@@ -2025,230 +2111,172 @@
                             bold: True
                             halign: "center"
                             size_hint_y: None
-                            height: dp(30)
-                        
+                            height: dp(32)
+
                         MDLabel:
                             id: profile_email_header
                             text: "email@example.com"
                             theme_text_color: "Custom"
-                            text_color: 0.9, 0.95, 1, 1
+                            text_color: 0.85, 0.93, 1, 1
                             font_style: "Caption"
                             halign: "center"
                             size_hint_y: None
                             height: dp(20)
-                    
+
+                        MDCard:
+                            size_hint: None, None
+                            size: dp(110), dp(24)
+                            md_bg_color: 1, 1, 1, 0.18
+                            radius: [12, 12, 12, 12]
+                            pos_hint: {"center_x": 0.5}
+                            elevation: 0
+                            MDLabel:
+                                id: profile_role_header
+                                text: "Client"
+                                theme_text_color: "Custom"
+                                text_color: 1, 1, 1, 1
+                                font_style: "Caption"
+                                bold: True
+                                halign: "center"
+                                valign: "middle"
+
                     # Informations personnelles
                     MDCard:
                         orientation: "vertical"
-                        padding: dp(16)
-                        spacing: dp(12)
+                        padding: dp(18)
+                        spacing: dp(6)
                         size_hint_y: None
                         height: self.minimum_height
                         md_bg_color: 1, 1, 1, 1
-                        
+                        radius: [18, 18, 18, 18]
+                        elevation: 1
+
                         MDBoxLayout:
                             orientation: "horizontal"
                             size_hint_y: None
-                            height: dp(24)
+                            height: dp(28)
                             spacing: dp(8)
                             MDIcon:
-                                icon: "information"
+                                icon: "badge-account"
                                 theme_text_color: "Custom"
-                                text_color: 0.13, 0.59, 0.95, 1
+                                text_color: bar_blue
                                 size_hint: None, None
                                 size: dp(24), dp(24)
                             MDLabel:
                                 text: "Informations personnelles"
                                 font_style: "H6"
+                                bold: True
                                 theme_text_color: "Custom"
-                                text_color: 0.2, 0.2, 0.2, 1
+                                text_color: 0.15, 0.2, 0.3, 1
                                 size_hint_y: None
-                                height: dp(24)
-                        
+                                height: dp(28)
+
                         MDSeparator:
                             size_hint_y: None
                             height: dp(1)
-                            color: 0.9, 0.9, 0.9, 1
-                        
-                        # Nom complet
-                        MDBoxLayout:
-                            orientation: "horizontal"
+                            color: 0.9, 0.92, 0.95, 1
+
+                        MDTextField:
+                            id: acc_name
+                            hint_text: "Nom complet"
+                            mode: "fill"
+                            fill_color: 0.96, 0.97, 0.99, 1
+                            icon_left: "account-edit"
                             size_hint_y: None
-                            height: dp(56)
-                            spacing: dp(12)
-                            MDIcon:
-                                icon: "account"
-                                theme_text_color: "Custom"
-                                text_color: 0.5, 0.5, 0.5, 1
-                                size_hint: None, None
-                                size: dp(24), dp(24)
-                            MDTextField:
-                                id: acc_name
-                                hint_text: "Nom complet"
-                                mode: "rectangle"
-                                size_hint_y: None
-                                height: dp(56)
-                                icon_left: "account-edit"
-                        
-                        # Email
-                        MDBoxLayout:
-                            orientation: "horizontal"
+                            height: dp(62)
+
+                        MDTextField:
+                            id: acc_email
+                            hint_text: "Email"
+                            mode: "fill"
+                            fill_color: 0.96, 0.97, 0.99, 1
+                            readonly: True
+                            icon_left: "email"
+                            helper_text: "L'email ne peut pas etre modifie"
+                            helper_text_mode: "persistent"
                             size_hint_y: None
-                            height: dp(56)
-                            spacing: dp(12)
-                            MDIcon:
-                                icon: "email"
-                                theme_text_color: "Custom"
-                                text_color: 0.5, 0.5, 0.5, 1
-                                size_hint: None, None
-                                size: dp(24), dp(24)
-                            MDTextField:
-                                id: acc_email
-                                hint_text: "Email"
-                                mode: "rectangle"
-                                readonly: True
-                                size_hint_y: None
-                                height: dp(56)
-                                icon_left: "lock"
-                        
-                        # Téléphone
-                        MDBoxLayout:
-                            orientation: "horizontal"
+                            height: dp(62)
+
+                        MDTextField:
+                            id: acc_phone
+                            hint_text: "Telephone"
+                            mode: "fill"
+                            fill_color: 0.96, 0.97, 0.99, 1
+                            icon_left: "phone"
                             size_hint_y: None
-                            height: dp(56)
-                            spacing: dp(12)
-                            MDIcon:
-                                icon: "phone"
-                                theme_text_color: "Custom"
-                                text_color: 0.5, 0.5, 0.5, 1
-                                size_hint: None, None
-                                size: dp(24), dp(24)
-                            MDTextField:
-                                id: acc_phone
-                                hint_text: "Téléphone"
-                                mode: "rectangle"
-                                size_hint_y: None
-                                height: dp(56)
-                                icon_left: "phone-edit"
-                        
-                        # Adresse
-                        MDBoxLayout:
-                            orientation: "horizontal"
+                            height: dp(62)
+
+                        MDTextField:
+                            id: acc_address
+                            hint_text: "Adresse"
+                            mode: "fill"
+                            fill_color: 0.96, 0.97, 0.99, 1
+                            icon_left: "map-marker"
                             size_hint_y: None
-                            height: dp(56)
-                            spacing: dp(12)
-                            MDIcon:
-                                icon: "map-marker"
-                                theme_text_color: "Custom"
-                                text_color: 0.5, 0.5, 0.5, 1
-                                size_hint: None, None
-                                size: dp(24), dp(24)
-                            MDTextField:
-                                id: acc_address
-                                hint_text: "Adresse"
-                                mode: "rectangle"
-                                size_hint_y: None
-                                height: dp(56)
-                                icon_left: "pencil"
-                        
-                        # Date de naissance
+                            height: dp(62)
+
+                        # Date de naissance (masquee si vide)
                         MDBoxLayout:
+                            id: row_birth_date
                             orientation: "horizontal"
-                            size_hint_y: None
-                            height: dp(56)
                             spacing: dp(12)
+                            size_hint_y: None
+                            height: 0
+                            opacity: 0
+                            disabled: True
                             MDIcon:
                                 icon: "calendar"
                                 theme_text_color: "Custom"
-                                text_color: 0.5, 0.5, 0.5, 1
+                                text_color: 0.55, 0.6, 0.68, 1
                                 size_hint: None, None
                                 size: dp(24), dp(24)
-                            MDTextField:
+                                pos_hint: {"center_y": 0.5}
+                            MDLabel:
                                 id: acc_birth_date
-                                hint_text: "Date de naissance"
-                                mode: "rectangle"
-                                readonly: True
-                                size_hint_y: None
-                                height: dp(56)
-                                icon_left: "lock"
-                        
-                        # Genre
+                                text: ""
+                                theme_text_color: "Custom"
+                                text_color: 0.35, 0.4, 0.5, 1
+                                font_style: "Subtitle1"
+                                valign: "middle"
+
+                        # Genre (masquee si vide)
                         MDBoxLayout:
+                            id: row_gender
                             orientation: "horizontal"
-                            size_hint_y: None
-                            height: dp(56)
                             spacing: dp(12)
+                            size_hint_y: None
+                            height: 0
+                            opacity: 0
+                            disabled: True
                             MDIcon:
                                 icon: "gender-male-female"
                                 theme_text_color: "Custom"
-                                text_color: 0.5, 0.5, 0.5, 1
+                                text_color: 0.55, 0.6, 0.68, 1
                                 size_hint: None, None
                                 size: dp(24), dp(24)
-                            MDTextField:
+                                pos_hint: {"center_y": 0.5}
+                            MDLabel:
                                 id: acc_gender
-                                hint_text: "Genre"
-                                mode: "rectangle"
-                                readonly: True
-                                size_hint_y: None
-                                height: dp(56)
-                                icon_left: "lock"
-                        
+                                text: ""
+                                theme_text_color: "Custom"
+                                text_color: 0.35, 0.4, 0.5, 1
+                                font_style: "Subtitle1"
+                                valign: "middle"
+
                         MDSeparator:
                             size_hint_y: None
-                            height: dp(8)
-                        
-                        # Bouton sauvegarder
+                            height: dp(10)
+
                         MDRaisedButton:
-                            text: "Sauvegarder les modifications"
-                            md_bg_color: 0.13, 0.59, 0.95, 1
+                            text: "Sauvegarder"
+                            icon: "check"
+                            md_bg_color: bar_blue
                             text_color: 1, 1, 1, 1
                             on_release: root.save_profile()
                             size_hint_x: 1
                             size_hint_y: None
-                            height: dp(50)
-                    
-                    # Test upload image
-                    MDCard:
-                        orientation: "vertical"
-                        padding: dp(16)
-                        spacing: dp(12)
-                        size_hint_y: None
-                        height: dp(120)
-                        md_bg_color: 1, 1, 1, 1
-                        
-                        MDBoxLayout:
-                            orientation: "horizontal"
-                            size_hint_y: None
-                            height: dp(24)
-                            spacing: dp(8)
-                            MDIcon:
-                                icon: "cloud-upload"
-                                theme_text_color: "Custom"
-                                text_color: 0.13, 0.59, 0.95, 1
-                                size_hint: None, None
-                                size: dp(24), dp(24)
-                            MDLabel:
-                                text: "Test Upload Image"
-                                font_style: "H6"
-                                theme_text_color: "Custom"
-                                text_color: 0.2, 0.2, 0.2, 1
-                                size_hint_y: None
-                                height: dp(24)
-                        
-                        MDSeparator:
-                            size_hint_y: None
-                            height: dp(1)
-                            color: 0.9, 0.9, 0.9, 1
-                        
-                        MDRaisedButton:
-                            text: "Choisir et uploader une image"
-                            md_bg_color: 0.13, 0.59, 0.95, 1
-                            text_color: 1, 1, 1, 1
-                            on_release: app.pick_and_upload_image(lambda url: setattr(self, 'text', f'URL: {url}'))
-                            size_hint_x: 1
-                            size_hint_y: None
-                            height: dp(50)
-                    
+                            height: dp(52)
+
                     # Message
                     MDLabel:
                         id: message_label
@@ -2258,6 +2286,303 @@
                         size_hint_y: None
                         height: dp(30)
                         opacity: 1 if root.message else 0
+
+<CheckoutScreen>:
+    MDScreen:
+        md_bg_color: 0.95, 0.96, 0.98, 1
+        MDBoxLayout:
+            orientation: "vertical"
+            MDTopAppBar:
+                title: "Finaliser la commande"
+                elevation: 2
+                md_bg_color: bar_blue
+                specific_text_color: bar_text
+                left_action_items: [["arrow-left", lambda x: setattr(app.root, "current", "cart")]]
+            ScrollView:
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: dp(14)
+                    adaptive_height: True
+                    padding: dp(16)
+
+                    MDCard:
+                        orientation: "vertical"
+                        padding: dp(18)
+                        spacing: dp(8)
+                        size_hint_y: None
+                        height: self.minimum_height
+                        md_bg_color: 1, 1, 1, 1
+                        radius: [16, 16, 16, 16]
+                        elevation: 1
+
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            size_hint_y: None
+                            height: dp(26)
+                            spacing: dp(8)
+                            MDIcon:
+                                icon: "cart-check"
+                                theme_text_color: "Custom"
+                                text_color: bar_blue
+                                size_hint: None, None
+                                size: dp(22), dp(22)
+                            MDLabel:
+                                text: "Resume de la commande"
+                                font_style: "H6"
+                                bold: True
+                                theme_text_color: "Custom"
+                                text_color: 0.15, 0.2, 0.3, 1
+
+                        MDSeparator:
+                            size_hint_y: None
+                            height: dp(1)
+                            color: 0.9, 0.92, 0.95, 1
+
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            size_hint_y: None
+                            height: dp(32)
+                            MDLabel:
+                                text: str(app.cart_badge_count) + " article(s) dans le panier"
+                                theme_text_color: "Secondary"
+                                font_style: "Body2"
+                            MDLabel:
+                                text: "Paiement a la livraison"
+                                theme_text_color: "Custom"
+                                text_color: 0.063, 0.725, 0.506, 1
+                                font_style: "Body2"
+                                bold: True
+                                halign: "right"
+
+                    MDCard:
+                        orientation: "vertical"
+                        padding: dp(18)
+                        spacing: dp(8)
+                        size_hint_y: None
+                        height: self.minimum_height
+                        md_bg_color: 1, 1, 1, 1
+                        radius: [16, 16, 16, 16]
+                        elevation: 1
+
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            size_hint_y: None
+                            height: dp(26)
+                            spacing: dp(8)
+                            MDIcon:
+                                icon: "map-marker-radius"
+                                theme_text_color: "Custom"
+                                text_color: bar_blue
+                                size_hint: None, None
+                                size: dp(22), dp(22)
+                            MDLabel:
+                                text: "Adresse de livraison"
+                                font_style: "H6"
+                                bold: True
+                                theme_text_color: "Custom"
+                                text_color: 0.15, 0.2, 0.3, 1
+
+                        MDSeparator:
+                            size_hint_y: None
+                            height: dp(1)
+                            color: 0.9, 0.92, 0.95, 1
+
+                        MDCard:
+                            orientation: "horizontal"
+                            padding: dp(12)
+                            spacing: dp(10)
+                            size_hint_y: None
+                            height: dp(44)
+                            md_bg_color: 0.91, 0.96, 1, 1
+                            radius: [10, 10, 10, 10]
+                            elevation: 0
+                            MDIcon:
+                                icon: "information-outline"
+                                theme_text_color: "Custom"
+                                text_color: bar_blue
+                                size_hint: None, None
+                                size: dp(20), dp(20)
+                                pos_hint: {"center_y": 0.5}
+                            MDLabel:
+                                text: "Nous livrons uniquement a Lubumbashi et ses environs."
+                                theme_text_color: "Custom"
+                                text_color: 0.15, 0.3, 0.55, 1
+                                font_style: "Caption"
+                                valign: "middle"
+
+                        MDTextField:
+                            id: checkout_quartier
+                            hint_text: "Quartier / Avenue"
+                            mode: "fill"
+                            fill_color: 0.96, 0.97, 0.99, 1
+                            icon_left: "map"
+                            size_hint_y: None
+                            height: dp(62)
+
+                        MDTextField:
+                            id: checkout_address_detail
+                            hint_text: "Numero / reperence (ex: n15, face marche)"
+                            mode: "fill"
+                            fill_color: 0.96, 0.97, 0.99, 1
+                            icon_left: "home-map-marker"
+                            size_hint_y: None
+                            height: dp(62)
+
+                    MDCard:
+                        orientation: "vertical"
+                        padding: dp(18)
+                        spacing: dp(8)
+                        size_hint_y: None
+                        height: self.minimum_height
+                        md_bg_color: 1, 1, 1, 1
+                        radius: [16, 16, 16, 16]
+                        elevation: 1
+
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            size_hint_y: None
+                            height: dp(26)
+                            spacing: dp(8)
+                            MDIcon:
+                                icon: "phone"
+                                theme_text_color: "Custom"
+                                text_color: bar_blue
+                                size_hint: None, None
+                                size: dp(22), dp(22)
+                            MDLabel:
+                                text: "Contact"
+                                font_style: "H6"
+                                bold: True
+                                theme_text_color: "Custom"
+                                text_color: 0.15, 0.2, 0.3, 1
+
+                        MDSeparator:
+                            size_hint_y: None
+                            height: dp(1)
+                            color: 0.9, 0.92, 0.95, 1
+
+                        MDTextField:
+                            id: checkout_phone
+                            hint_text: "Numero de telephone"
+                            mode: "fill"
+                            fill_color: 0.96, 0.97, 0.99, 1
+                            icon_left: "cellphone"
+                            input_filter: "int"
+                            size_hint_y: None
+                            height: dp(62)
+
+                    MDCard:
+                        orientation: "vertical"
+                        padding: dp(18)
+                        spacing: dp(10)
+                        size_hint_y: None
+                        height: self.minimum_height
+                        md_bg_color: 0.97, 0.98, 1, 1
+                        radius: [16, 16, 16, 16]
+                        elevation: 0
+
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            size_hint_y: None
+                            height: dp(26)
+                            spacing: dp(8)
+                            MDIcon:
+                                icon: "truck-delivery"
+                                theme_text_color: "Custom"
+                                text_color: bar_blue
+                                size_hint: None, None
+                                size: dp(22), dp(22)
+                            MDLabel:
+                                text: "Comment se passe la livraison ?"
+                                font_style: "H6"
+                                bold: True
+                                theme_text_color: "Custom"
+                                text_color: 0.15, 0.2, 0.3, 1
+
+                        MDSeparator:
+                            size_hint_y: None
+                            height: dp(1)
+                            color: 0.9, 0.92, 0.95, 1
+
+                        MDLabel:
+                            text: "1. Vous passez votre commande et confirmez votre adresse."
+                            theme_text_color: "Custom"
+                            text_color: 0.3, 0.35, 0.45, 1
+                            font_style: "Body2"
+                            size_hint_y: None
+                            height: dp(28)
+
+                        MDLabel:
+                            text: "2. Un livreur est affecte a votre commande."
+                            theme_text_color: "Custom"
+                            text_color: 0.3, 0.35, 0.45, 1
+                            font_style: "Body2"
+                            size_hint_y: None
+                            height: dp(28)
+
+                        MDLabel:
+                            text: "3. Livraison sous 72h maximum a Lubumbashi."
+                            theme_text_color: "Custom"
+                            text_color: 0.3, 0.35, 0.45, 1
+                            font_style: "Body2"
+                            bold: True
+                            size_hint_y: None
+                            height: dp(28)
+
+                        MDLabel:
+                            text: "4. Vous payez en especes a la reception du colis."
+                            theme_text_color: "Custom"
+                            text_color: 0.3, 0.35, 0.45, 1
+                            font_style: "Body2"
+                            size_hint_y: None
+                            height: dp(28)
+
+                        MDCard:
+                            orientation: "horizontal"
+                            padding: dp(12)
+                            spacing: dp(10)
+                            size_hint_y: None
+                            height: dp(40)
+                            md_bg_color: 0.91, 0.96, 1, 1
+                            radius: [10, 10, 10, 10]
+                            elevation: 0
+                            MDIcon:
+                                icon: "check-circle"
+                                theme_text_color: "Custom"
+                                text_color: 0.063, 0.725, 0.506, 1
+                                size_hint: None, None
+                                size: dp(20), dp(20)
+                                pos_hint: {"center_y": 0.5}
+                            MDLabel:
+                                text: "Paiement cash a la livraison"
+                                theme_text_color: "Custom"
+                                text_color: 0.063, 0.725, 0.506, 1
+                                font_style: "Caption"
+                                bold: True
+                                valign: "middle"
+
+                    MDLabel:
+                        id: checkout_message
+                        text: root.message
+                        theme_text_color: "Error"
+                        halign: "center"
+                        size_hint_y: None
+                        height: dp(30)
+                        opacity: 1 if root.message else 0
+
+                    MDRaisedButton:
+                        text: "Confirmer la commande"
+                        icon: "check"
+                        md_bg_color: bar_blue
+                        text_color: 1, 1, 1, 1
+                        on_release: root.confirm_order()
+                        size_hint_x: 1
+                        size_hint_y: None
+                        height: dp(56)
+
+                    Widget:
+                        size_hint_y: None
+                        height: dp(20)
 
 <ContactAdminScreen>:
     MDScreen:
@@ -2300,7 +2625,7 @@
                 
                 MDRaisedButton:
                     text: "Envoyer"
-                    md_bg_color: 0.13, 0.59, 0.95, 1
+                    md_bg_color: bar_blue
                     size_hint_y: None
                     height: dp(50)
                     on_release: root.send_message()
@@ -2308,7 +2633,7 @@
                 MDLabel:
                     text: root.message
                     theme_text_color: "Custom"
-                    text_color: 0.13, 0.59, 0.95, 1
+                    text_color: bar_blue
                     halign: "center"
                     size_hint_y: None
                     height: dp(24)
@@ -2405,7 +2730,7 @@
 
                 MDRaisedButton:
                     text: "Verifier"
-                    md_bg_color: 0.13, 0.59, 0.95, 1
+                    md_bg_color: bar_blue
                     on_release: root.verify_code()
                     size_hint_y: None
                     height: dp(50)
@@ -2413,7 +2738,7 @@
                 MDFlatButton:
                     text: "Renvoyer le code"
                     theme_text_color: "Custom"
-                    text_color: 0.13, 0.59, 0.95, 1
+                    text_color: bar_blue
                     on_release: root.resend_code()
                     disabled: not root.can_resend
                     size_hint_y: None
@@ -2478,7 +2803,7 @@
 
                     MDRaisedButton:
                         text: "Envoyer le code"
-                        md_bg_color: 0.13, 0.59, 0.95, 1
+                        md_bg_color: bar_blue
                         on_release: root.send_reset_code()
                         size_hint_y: None
                         height: dp(50)
@@ -2556,7 +2881,7 @@
 
                     MDRaisedButton:
                         text: "Reinitialiser"
-                        md_bg_color: 0.13, 0.59, 0.95, 1
+                        md_bg_color: bar_blue
                         on_release: root.reset_password()
                         size_hint_y: None
                         height: dp(50)
@@ -2592,6 +2917,8 @@ RootManager:
         name: "product_details"
     CartScreen:
         name: "cart"
+    CheckoutScreen:
+        name: "checkout"
     OrdersScreen:
         name: "orders"
     AccountScreen:
@@ -2609,7 +2936,7 @@ RootManager:
 
 <LoadingScreen>:
     MDScreen:
-        md_bg_color: bar_blue
+        md_bg_color: 0, 0.624, 0.89, 1
         
         MDBoxLayout:
             orientation: "vertical"
@@ -2621,17 +2948,9 @@ RootManager:
             FitImage:
                 source: "img/logo.png"
                 size_hint: None, None
-                size: dp(120), dp(120)
+                size: dp(128), dp(128)
                 pos_hint: {"center_x": 0.5}
                 radius: [20, 20, 20, 20]
-            
-            MDLabel:
-                text: "Spaceness"
-                theme_text_color: "Custom"
-                text_color: 1, 1, 1, 1
-                font_style: "H4"
-                bold: True
-                halign: "center"
             
             MDLabel:
                 text: "Marketplace"
@@ -2646,8 +2965,7 @@ RootManager:
                 size_hint: None, None
                 size: dp(40), dp(40)
                 pos_hint: {"center_x": 0.5}
-                theme_text_color: "Custom"
-                text_color: 1, 1, 1, 1
+                color: 1, 1, 1, 1
             
             MDLabel:
                 text: app.loading_message
