@@ -1,105 +1,39 @@
-name: Build APK Android
+name: Build APK
 
-on:
-  workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'main.py'
-      - 'app.kv'
-      - 'api_client.py'
-      - 'broker/**'
-      - 'requirements.txt'
-      - 'buildozer.spec'
-      - '.github/workflows/build.yml'
+on: [push, pull_request]
 
 jobs:
   build:
-    name: Construire APK Spaceness
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout du code
+      - name: Récupérer le code
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Configurer Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.10'
 
-      - name: Cache buildozer / p4a / pip
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.buildozer
-            ./.buildozer/android/platform
-            ~/.cache/pip
-          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec','requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-buildozer-
+      - name: Installer les dépendances système obligatoires
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libffi-dev libssl-dev autoconf automake libtool pkg-config zlib1g-dev ccache
 
-      - name: Installer Cython
+      - name: Installer Buildozer (version stable)
         run: |
           pip install --upgrade pip
-          pip install cython==0.29.37 virtualenv
+          pip install cython==0.29.36
+          pip install git+https://github.com
 
-      - name: Installer Buildozer et python-for-android (epingles)
+      - name: Lancer la compilation de l'APK
         run: |
-          pip install buildozer==1.6.0 python-for-android==2026.5.9
-          sudo apt update
-          sudo apt install -y libffi-dev libssl-dev python3-dev zlib1g-dev\
-            libltdl-dev libncurses5-dev libgdbm-dev libnss3-dev\
-            libsqlite3-dev libreadline-dev libbz2-dev libgdbm-compat-dev\
-            autoconf automake libtool pkg-config gcc make git\
-            openjdk-17-jdk unzip
+          # Cette commande force l'acceptation automatique des licences de téléchargement Android
+          yes | buildozer android debug
 
-      - name: Pre-telecharger les sources (contourne les 502 Savannah/GNU)
-        run: |
-          set -e
-          # Savannah (download.savannah.gnu.org) renvoie 502 depuis GitHub Actions.
-          # On fournit les sources de freetype depuis le depot GitHub officiel via le
-          # mecanisme P4A_*_DIR de p4a (copie des sources au lieu de les telecharger).
-          mkdir -p .buildozer/sources
-          echo "=== Clone de freetype 2.14.1 depuis GitHub ==="
-          git clone --depth 1 --branch VER-2-14-1 \
-            https://github.com/freetype/freetype.git \
-            .buildozer/sources/freetype
-          echo "=== Sources freetype pretees ==="
-          ls .buildozer/sources/freetype | head
-
-      - name: Builder l'APK (avec essais et logs verbeux)
-        run: |
-          cd "$GITHUB_WORKSPACE"
-          # Sources locales fournies a p4a pour contourner les 502 Savannah/GNU
-          export P4A_FREETYPE_DIR="$GITHUB_WORKSPACE/.buildozer/sources/freetype"
-          n=0
-          max=3
-          until [ $n -ge $max ]
-          do
-            n=$((n+1))
-            echo "=== Build attempt $n/$max ==="
-            yes | buildozer -v android debug && break
-            echo "buildozer failed on attempt $n. Retrying in $((n*15))s..."
-            sleep $((n*15))
-          done
-          if [ $n -ge $max ]; then
-            echo "Buildozer failed after $max attempts"
-            echo "--- Last 200 lines of p4a build.log ---"
-            tail -n 200 ./.buildozer/android/platform/python-for-android/build.log 2>/dev/null || true
-            # exporter le log complet pour diagnostic
-            cp ./.buildozer/android/platform/python-for-android/build.log ./py-build.log 2>/dev/null || true
-            exit 1
-          fi
-
-      - name: Uploader l'APK
+      - name: Télécharger l'APK générée
         uses: actions/upload-artifact@v4
-        if: success()
         with:
-          name: apk-spaceness
+          name: Mon-Application-APK
           path: bin/*.apk
-
-      - name: Uploader le log de build (diagnostic)
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: py-build-log
-          path: py-build.log
+          
