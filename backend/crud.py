@@ -810,6 +810,20 @@ async def list_all_users() -> List[Dict[str, Any]]:
         return [dict(r._mapping) for r in result.all()]
 
 
+async def get_user_info(user_id: int) -> Optional[Dict[str, Any]]:
+    async with async_session() as session:
+        result = await session.execute(
+            select(
+                User.id, User.full_name, User.email, User.role,
+                User.is_blocked, User.is_verified, User.created_at,
+            ).where(User.id == user_id)
+        )
+        row = result.one_or_none()
+        if not row:
+            return None
+        return dict(row._mapping)
+
+
 async def set_user_block_status(user_id: int, blocked: int) -> Tuple[bool, str]:
     async with async_session() as session:
         result = await session.execute(select(User).where(User.id == user_id))
@@ -880,7 +894,22 @@ async def list_all_shops() -> List[Dict[str, Any]]:
     async with async_session() as session:
         result = await session.execute(select(Shop).order_by(Shop.id.desc()))
         rows = result.scalars().all()
-        return [{c.name: getattr(r, c.name) for c in Shop.__table__.columns} for r in rows]
+        shops = []
+        for r in rows:
+            d = {c.name: getattr(r, c.name) for c in Shop.__table__.columns}
+            sub = await session.execute(
+                select(User.full_name, func.count(Product.id))
+                .select_from(Shop)
+                .join(User, Shop.owner_user_id == User.id)
+                .outerjoin(Product, Product.shop_id == Shop.id)
+                .where(Shop.id == r.id)
+                .group_by(User.full_name)
+            )
+            row = sub.one_or_none()
+            d["owner_name"] = row[0] if row else None
+            d["product_count"] = row[1] if row else 0
+            shops.append(d)
+        return shops
 
 
 async def list_all_orders() -> List[Dict[str, Any]]:

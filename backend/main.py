@@ -646,9 +646,17 @@ async def get_subscribed_products(user_id: int):
 
 # ============ ADMIN / UTILISATEURS ============
 @app.get("/api/admin/users")
-async def list_users():
+async def admin_get_users():
     users = await db.list_all_users()
     return {"ok": True, "users": users}
+
+
+@app.get("/api/admin/users/{user_id}")
+async def admin_get_user(user_id: int):
+    user = await db.get_user_info(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable")
+    return {"ok": True, **user}
 
 
 @app.post("/api/admin/users/block")
