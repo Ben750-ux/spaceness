@@ -25,14 +25,25 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Cache buildozer / p4a / pip
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.buildozer
+            ./.buildozer/android/platform
+            ~/.cache/pip
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec','requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-buildozer-
+
       - name: Installer Cython
         run: |
           pip install --upgrade pip
           pip install cython==0.29.37 virtualenv
 
-      - name: Installer Buildozer
+      - name: Installer Buildozer et python-for-android (epingles)
         run: |
-          pip install buildozer
+          pip install buildozer==1.5.0 python-for-android==2024.5.15
           sudo apt update
           sudo apt install -y libffi-dev libssl-dev python3-dev zlib1g-dev\
             libltdl-dev libncurses5-dev libgdbm-dev libnss3-dev\
@@ -40,10 +51,25 @@ jobs:
             autoconf automake libtool pkg-config gcc make git\
             openjdk-17-jdk unzip
 
-      - name: Builder l'APK
+      - name: Builder l'APK (avec essais et logs verbeux)
         run: |
           cd "$GITHUB_WORKSPACE"
-          yes | buildozer -v android debug
+          n=0
+          max=3
+          until [ $n -ge $max ]
+          do
+            n=$((n+1))
+            echo "=== Build attempt $n/$max ==="
+            yes | buildozer -v android debug && break
+            echo "buildozer failed on attempt $n. Retrying in $((n*15))s..."
+            sleep $((n*15))
+          done
+          if [ $n -ge $max ]; then
+            echo "Buildozer failed after $max attempts"
+            echo "--- Last 200 lines of p4a build.log ---"
+            tail -n 200 ./.buildozer/android/platform/python-for-android/build.log 2>/dev/null || true
+            exit 1
+          fi
 
       - name: Uploader l'APK
         uses: actions/upload-artifact@v4
