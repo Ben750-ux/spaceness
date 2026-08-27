@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from config import settings
 from models import (
     ActivityLog, AdminMessage, AppSetting, Favorite, LoginAttempt, Order, Product,
     ProductReview, Shop, ShopSubscription, User, UserRole, ViewHistory,
@@ -1489,14 +1490,19 @@ async def get_popular_products(limit: int = 10) -> List[Dict[str, Any]]:
 
 async def get_monthly_stats() -> List[Dict[str, Any]]:
     async with async_session() as session:
+        driver = settings.db_driver
+        if driver == "postgresql":
+            month_expr = func.to_char(Order.created_at, "YYYY-MM")
+        else:
+            month_expr = func.strftime("%Y-%m", Order.created_at)
         query = (
             select(
-                func.strftime("%Y-%m", Order.created_at).label("month"),
+                month_expr.label("month"),
                 func.count(Order.id).label("order_count"),
                 func.coalesce(func.sum(Order.total_amount), 0).label("revenue"),
             )
-            .group_by(func.strftime("%Y-%m", Order.created_at))
-            .order_by(func.strftime("%Y-%m", Order.created_at))
+            .group_by(month_expr)
+            .order_by(month_expr)
         )
         result = await session.execute(query)
         return [dict(r._mapping) for r in result.all()]
