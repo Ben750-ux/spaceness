@@ -1590,16 +1590,20 @@ async def get_shop_subscriber_count(shop_id: int) -> int:
 
 async def get_shop_monthly_stats(shop_id: int) -> List[Dict[str, Any]]:
     async with async_session() as session:
+        if settings.db_driver == "postgresql":
+            month_expr = func.to_char(Order.created_at, "YYYY-MM")
+        else:
+            month_expr = func.strftime("%Y-%m", Order.created_at)
         query = (
             select(
-                func.strftime("%Y-%m", Order.created_at).label("month"),
+                month_expr.label("month"),
                 func.count(Order.id).label("order_count"),
                 func.coalesce(func.sum(Order.total_amount), 0).label("revenue"),
             )
             .join(Product, Order.product_id == Product.id)
             .where(Product.shop_id == shop_id)
-            .group_by(func.strftime("%Y-%m", Order.created_at))
-            .order_by(func.strftime("%Y-%m", Order.created_at))
+            .group_by(month_expr)
+            .order_by(month_expr)
         )
         result = await session.execute(query)
         return [dict(r._mapping) for r in result.all()]
