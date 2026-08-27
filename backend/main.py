@@ -274,6 +274,7 @@ async def register(req: RegisterRequest):
     _, _, user = await db.login_user(req.email, req.password)
     if not user:
         raise HTTPException(status_code=500, detail="Erreur lors de la creation du compte")
+    await db.log_activity(user.get("id"), req.full_name, "Inscription", f"Nouveau compte cree (role: {req.role})")
     return {"ok": True, "message": msg, "user_id": user.get("id")}
 
 
@@ -284,6 +285,7 @@ async def login(req: LoginRequest):
         return {"ok": False, "message": msg, "verification_required": True, "user": user}
     if not ok:
         raise HTTPException(status_code=401, detail=msg)
+    await db.log_activity(user.get("id"), user.get("full_name"), "Connexion", "Connexion reussie")
     return {"ok": True, "message": msg, "user": user}
 
 
@@ -476,6 +478,7 @@ async def create_shop(req: ShopCreateRequest):
     ok, msg = await db.create_shop(req.owner_user_id, req.shop_name, req.description, req.contact_info)
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
+    await db.log_activity(req.owner_user_id, None, "Creation boutique", f"Boutique '{req.shop_name}' creee")
     return {"ok": True, "message": msg}
 
 
@@ -496,6 +499,7 @@ async def place_order(req: OrderRequest):
     ok, msg = await db.place_order(req.client_user_id, req.product_id, req.quantity)
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
+    await db.log_activity(req.client_user_id, None, "Commande", "Nouvelle commande placee")
     return {"ok": True, "message": msg}
 
 
@@ -664,6 +668,7 @@ async def block_user(req: BlockUserRequest):
     ok, msg = await db.set_user_block_status(req.user_id, req.blocked)
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
+    await db.log_activity(None, "Admin", "Blocage utilisateur", f"Utilisateur #{req.user_id} -> {'bloque' if req.blocked else 'debloque'}")
     return {"ok": True, "message": msg}
 
 
@@ -672,6 +677,7 @@ async def delete_user(req: UserIdRequest):
     ok, msg = await db.delete_user(req.user_id)
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
+    await db.log_activity(None, "Admin", "Suppression utilisateur", f"Utilisateur #{req.user_id} supprime")
     return {"ok": True, "message": msg}
 
 
@@ -706,6 +712,7 @@ async def admin_delete_product(product_id: int):
     ok = await db.delete_product(product_id)
     if not ok:
         raise HTTPException(status_code=400, detail="Erreur suppression produit")
+    await db.log_activity(None, "Admin", "Suppression produit", f"Produit #{product_id} supprime")
     return {"ok": True}
 
 
@@ -714,6 +721,7 @@ async def admin_delete_shop(shop_id: int):
     ok = await db.delete_shop(shop_id)
     if not ok:
         raise HTTPException(status_code=400, detail="Erreur suppression boutique")
+    await db.log_activity(None, "Admin", "Suppression boutique", f"Boutique #{shop_id} supprimee")
     return {"ok": True}
 
 
@@ -728,12 +736,16 @@ async def admin_get_shop_details(shop_id: int):
 @app.put("/api/admin/shops/{shop_id}/credentials")
 async def admin_update_shop_credentials(shop_id: int, req: ShopCredentialsRequest):
     ok, msg = await db.update_shop_credentials(shop_id, req.owner_name, req.password)
+    if ok:
+        await db.log_activity(None, "Admin", "Modification boutique", f"Identifiants boutique #{shop_id} mis a jour")
     return {"ok": ok, "message": msg}
 
 
 @app.put("/api/admin/shops/{shop_id}/info")
 async def admin_update_shop_info(shop_id: int, req: ShopInfoRequest):
     ok, msg = await db.update_shop_info(shop_id, req.shop_name, req.description, req.contact_info)
+    if ok:
+        await db.log_activity(None, "Admin", "Modification boutique", f"Infos boutique #{shop_id} mises a jour")
     return {"ok": ok, "message": msg}
 
 
@@ -918,6 +930,7 @@ async def admin_update_order_status(order_id: int, req: StatusUpdateRequest):
     ok = await db.update_order_status(order_id, req.status)
     if not ok:
         raise HTTPException(status_code=400, detail="Erreur mise a jour statut")
+    await db.log_activity(None, "Admin", "Statut commande", f"Commande #{order_id} -> {req.status}")
     return {"ok": True}
 
 
@@ -1034,6 +1047,7 @@ async def create_orders_from_cart(req: CartOrderRequest):
     )
     if not order_ids:
         raise HTTPException(status_code=400, detail="Aucune commande creee (stock insuffisant ou produit indisponible)")
+    await db.log_activity(req.user_id, None, "Commande", f"{len(order_ids)} commande(s) depuis le panier")
     return {"ok": True, "order_ids": order_ids, "message": f"{len(order_ids)} commande(s) enregistree(s)"}
 
 
