@@ -7,17 +7,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Récupérer le code
+      - name: Recuperer le code Spaceness
         uses: actions/checkout@v4
 
-      - name: Compiler avec l'Action officielle Buildozer
-        # Cet outil contient déjà Android pré-installé, évitant l'erreur 502 de Google
-        uses: jbbandos/buildozer-action@main
+      - name: Build automatique avec l action officielle Kivy
+        uses: ArtemSBulgakov/buildozer-action@v1
         with:
           command: buildozer android debug
-          repository_path: .
+          buildozer_version: stable
 
-      - name: Télécharger l'APK générée
+      - name: Telecharger l APK de Spaceness
         uses: actions/upload-artifact@v4
         with:
           name: Spaceness-APK
