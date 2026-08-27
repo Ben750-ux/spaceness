@@ -1,5 +1,6 @@
 import json
 import os
+import ssl
 import threading
 import mimetypes
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -8,6 +9,32 @@ from urllib.parse import urlencode
 from uuid import uuid4
 
 API_URL = os.environ.get("API_URL", "https://spaceness.onrender.com")
+
+_SSL_CONTEXT = None
+
+
+def _ssl_context() -> Optional[ssl.SSLContext]:
+    """Contexte SSL utilisant le bundle de CA de 'certifi' (indispensable sur
+    Android/p4a ou le store OpenSSL par defaut est vide -> erreur
+    CERTIFICATE_VERIFY_FAILED)."""
+    global _SSL_CONTEXT
+    if _SSL_CONTEXT is not None:
+        return _SSL_CONTEXT
+    try:
+        import certifi
+        ctx = ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        ctx = None
+    _SSL_CONTEXT = ctx
+    return ctx
+
+
+def _urlopen(req: Request, timeout: int) -> Any:
+    """Wrapper de urlopen qui passe le contexte SSL certifi si disponible."""
+    ctx = _ssl_context()
+    if ctx is not None:
+        return urlopen(req, timeout=timeout, context=ctx)
+    return urlopen(req, timeout=timeout)
 
 
 def _api_url(path: str) -> str:
@@ -20,7 +47,7 @@ def _request(method: str, url: str, data: Any = None, timeout: int = 10) -> Any:
     body = json.dumps(data).encode() if data else None
     req = Request(url, data=body, headers=headers, method=method)
     try:
-        with urlopen(req, timeout=timeout) as resp:
+        with _urlopen(req, timeout=timeout) as resp:
             return json.loads(resp.read().decode())
     except HTTPError as e:
         detail = str(e)
@@ -177,7 +204,7 @@ def upload_image(filepath: str) -> Optional[str]:
     headers = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
     req = Request(f"{API_URL}/api/upload", data=body, headers=headers, method="POST")
     try:
-        with urlopen(req, timeout=120) as resp:
+        with _urlopen(req, timeout=120) as resp:
             result = json.loads(resp.read().decode())
             if result.get("ok"):
                 return result["url"]
