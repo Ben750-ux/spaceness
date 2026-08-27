@@ -898,7 +898,12 @@ async def list_all_orders() -> List[Dict[str, Any]]:
         result = await session.execute(query)
         rows = []
         for r in result.all():
-            d = {c.name: getattr(r.Order, c.name) for c in Order.__table__.columns}
+            d = {}
+            for c in Order.__table__.columns:
+                try:
+                    d[c.name] = getattr(r.Order, c.name)
+                except Exception:
+                    d[c.name] = None
             d["product_name"] = r.product_name
             d["client_name"] = r.client_name
             d["shop_name"] = r.shop_name
@@ -1649,7 +1654,7 @@ async def seed_default_settings():
         await session.commit()
 
 
-async def create_order_from_cart(client_user_id: int, items: List[Dict[str, Any]]) -> List[int]:
+async def create_order_from_cart(client_user_id: int, items: List[Dict[str, Any]], delivery_address: str = "", delivery_phone: str = "") -> List[int]:
     order_ids = []
     async with async_session() as session:
         for item in items:
@@ -1671,6 +1676,8 @@ async def create_order_from_cart(client_user_id: int, items: List[Dict[str, Any]
                 total_amount=total,
                 status="pending",
                 delivery_code=_generate_delivery_code(),
+                delivery_address=delivery_address or None,
+                delivery_phone=delivery_phone or None,
             )
             session.add(order)
             product.stock -= qty

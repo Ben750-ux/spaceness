@@ -99,6 +99,8 @@ class Order(Base):
     total_amount = Column(Float, nullable=False)
     status = Column(String(50), nullable=False, default="pending")
     delivery_code = Column(String(30), nullable=True, unique=True)
+    delivery_address = Column(String(500), nullable=True)
+    delivery_phone = Column(String(30), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     __table_args__ = (
@@ -261,19 +263,49 @@ async def init_db():
         try:
             if driver == "postgresql":
                 await conn.execute(text(
-                    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_code VARCHAR(30)"
+                    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_address VARCHAR(500)"
                 ))
                 await conn.execute(text(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_delivery_code ON orders(delivery_code)"
+                    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_phone VARCHAR(30)"
                 ))
             else:
                 cols = (await conn.execute(
                     text("PRAGMA table_info(orders)")
                 )).fetchall()
-                has_delivery = any(row[1] == "delivery_code" for row in cols)
-                if not has_delivery:
+                has_addr = any(row[1] == "delivery_address" for row in cols)
+                if not has_addr:
                     await conn.execute(text(
-                        "ALTER TABLE orders ADD COLUMN delivery_code VARCHAR(30)"
+                        "ALTER TABLE orders ADD COLUMN delivery_address VARCHAR(500)"
+                    ))
+                has_phone = any(row[1] == "delivery_phone" for row in cols)
+                if not has_phone:
+                    await conn.execute(text(
+                        "ALTER TABLE orders ADD COLUMN delivery_phone VARCHAR(30)"
+                    ))
+        except Exception as e:
+            import logging
+            logging.getLogger("uvicorn").warning(f"migration delivery columns failed: {e}")
+
+        try:
+            if driver == "postgresql":
+                await conn.execute(text(
+                    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_address VARCHAR(500)"
+                ))
+                await conn.execute(text(
+                    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_phone VARCHAR(30)"
+                ))
+            else:
+                cols = (await conn.execute(
+                    text("PRAGMA table_info(orders)")
+                )).fetchall()
+                col_names = [row[1] for row in cols]
+                if "delivery_address" not in col_names:
+                    await conn.execute(text(
+                        "ALTER TABLE orders ADD COLUMN delivery_address VARCHAR(500)"
+                    ))
+                if "delivery_phone" not in col_names:
+                    await conn.execute(text(
+                        "ALTER TABLE orders ADD COLUMN delivery_phone VARCHAR(30)"
                     ))
         except Exception:
             pass

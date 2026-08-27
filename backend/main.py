@@ -28,12 +28,34 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}
 
 
+# Keep-alive : evite l'endormissement du service (Render free tier = 15 min d'inactivite)
+KEEP_ALIVE_URL = os.environ.get("KEEP_ALIVE_URL", "https://spaceness.onrender.com/api/health")
+KEEP_ALIVE_INTERVAL = int(os.environ.get("KEEP_ALIVE_INTERVAL", "600"))  # secondes
+
+
+async def _keep_alive_loop() -> None:
+    while True:
+        await asyncio.sleep(KEEP_ALIVE_INTERVAL)
+        try:
+            def _ping() -> None:
+                req = Request(KEEP_ALIVE_URL, method="GET")
+                urlopen(req, timeout=15).read()
+            await asyncio.to_thread(_ping)
+        except Exception:
+            pass  # le ping a echoue : on reessaiera au prochain cycle
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
     await db.seed_default_settings()
     await db.seed_admin_and_demo()
+    keep_alive_task = None
+    if KEEP_ALIVE_URL:
+        keep_alive_task = asyncio.create_task(_keep_alive_loop())
     yield
+    if keep_alive_task:
+        keep_alive_task.cancel()
 
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
@@ -977,13 +999,19 @@ async def health():
 class CartOrderRequest(BaseModel):
     user_id: int
     items: list[dict] = []
+    delivery_address: str = ""
+    delivery_phone: str = ""
 
 
 @app.post("/api/orders/from-cart")
 async def create_orders_from_cart(req: CartOrderRequest):
     if not req.items:
         raise HTTPException(status_code=400, detail="Panier vide")
-    order_ids = await db.create_order_from_cart(req.user_id, req.items)
+    order_ids = await db.create_order_from_cart(
+        req.user_id, req.items,
+        delivery_address=req.delivery_address,
+        delivery_phone=req.delivery_phone,
+    )
     if not order_ids:
         raise HTTPException(status_code=400, detail="Aucune commande creee (stock insuffisant ou produit indisponible)")
     return {"ok": True, "order_ids": order_ids, "message": f"{len(order_ids)} commande(s) enregistree(s)"}
