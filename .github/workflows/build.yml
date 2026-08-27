@@ -43,7 +43,7 @@ jobs:
 
       - name: Installer Buildozer et python-for-android (epingles)
         run: |
-          pip install buildozer==1.5.0 python-for-android==2024.5.15
+          pip install buildozer==1.6.0 python-for-android==2026.5.9
           sudo apt update
           sudo apt install -y libffi-dev libssl-dev python3-dev zlib1g-dev\
             libltdl-dev libncurses5-dev libgdbm-dev libnss3-dev\
