@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View, RefreshControl, Modal } from 'react-native';
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -64,6 +63,8 @@ export default function MarketScreen() {
     await signOut();
     router.replace('/(auth)/login');
   };
+
+  const initial = (user?.full_name || '?').trim().charAt(0).toUpperCase();
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
@@ -146,7 +147,9 @@ export default function MarketScreen() {
         <Pressable style={styles.overlay} onPress={() => setMenuOpen(false)} />
         <View style={styles.drawer}>
           <View style={styles.drawerHeader}>
-            <Image source={{ uri: 'https://via.placeholder.com/60' }} style={styles.avatar} contentFit="cover" />
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initial}</Text>
+            </View>
             <View>
               <Text style={styles.drawerName}>{user?.full_name || 'Client'}</Text>
               <Text style={styles.drawerEmail}>{user?.email}</Text>
@@ -200,7 +203,8 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
   drawer: { position: 'absolute', top: 0, bottom: 0, left: 0, width: 280, backgroundColor: Colors.surface, paddingTop: 48, paddingHorizontal: 16 },
   drawerHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24 },
-  avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: Colors.surfaceMuted },
+  avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: '#fff', fontSize: 22, fontWeight: '800' },
   drawerName: { fontSize: 17, fontWeight: '800', color: Colors.text },
   drawerEmail: { fontSize: 12, color: Colors.textSecondary },
   drawerItem: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
