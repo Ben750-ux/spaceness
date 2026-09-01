@@ -140,6 +140,34 @@ Tu peux aussi créer ton propre compte client depuis l'app.
 
 ---
 
+## 🚀 Migration vers React Native (Expo)
+
+Le projet est en cours de migration vers **React Native (Expo)** pour le frontend mobile et **React** pour les dashboards. Le **backend FastAPI** reste inchangé.
+
+### Développer dans GitHub Codespaces
+
+Les fichiers `.devcontainer/` configurent automatiquement un environnement Codespace prêt pour Expo.
+
+1. Pousse ce dépôt sur GitHub (si pas déjà fait)
+2. Sur GitHub → bouton **"Code"** → **Codespaces** → **"Create codespace"**
+3. Attends que l'environnement se prépare (~1 min)
+4. Dans le terminal :
+   ```bash
+   npx create-expo-app mobile
+   ```
+5. Lance Expo :
+   ```bash
+   cd mobile && npx expo start
+   ```
+6. Scanne le QR code avec l'app **Expo Go** sur ton téléphone
+
+> ⚠️ **Pense à activer la port-forwarding** : dans Codespaces, le port 8081 doit être visible. Codespaces gère ça automatiquement pour les ports répertoriés dans `devcontainer.json`.
+
+### Note sur ton téléphone
+Tu dois installer **Expo Go** depuis le Play Store / App Store. Le QR code scanné ouvre ton app dans Expo Go, sans rien installer d'autre.
+
+---
+
 ## Erreur "Failed to load image <https://picsum.photos/...>"
 
 **Pas d'inquiétude, ce n'est pas une erreur grave.**
