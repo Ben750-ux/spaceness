@@ -9,7 +9,7 @@
       "version": "3.11"
     }
   },
-  "onCreateCommand": "npm install -g expo-cli@latest eas-cli@latest",
+  "onCreateCommand": "bash .devcontainer/postCreate/setup.sh",
   "postCreateCommand": "pip install --upgrade pip",
   "customizations": {
     "vscode": {
