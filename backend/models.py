@@ -41,6 +41,11 @@ class User(Base):
     verification_code_expires = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
+    phone = Column(String(30), nullable=True)
+    address = Column(String(500), nullable=True)
+    birth_date = Column(String(20), nullable=True)
+    gender = Column(String(20), nullable=True)
+
     shop = relationship("Shop", back_populates="owner", uselist=False, cascade="all, delete-orphan")
 
 
@@ -260,6 +265,37 @@ async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         driver = settings.db_driver
+        try:
+            if driver == "postgresql":
+                await conn.execute(text(
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(30)"
+                ))
+                await conn.execute(text(
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS address VARCHAR(500)"
+                ))
+                await conn.execute(text(
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date VARCHAR(20)"
+                ))
+                await conn.execute(text(
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS gender VARCHAR(20)"
+                ))
+            else:
+                cols = (await conn.execute(
+                    text("PRAGMA table_info(users)")
+                )).fetchall()
+                col_names = [row[1] for row in cols]
+                if "phone" not in col_names:
+                    await conn.execute(text("ALTER TABLE users ADD COLUMN phone VARCHAR(30)"))
+                if "address" not in col_names:
+                    await conn.execute(text("ALTER TABLE users ADD COLUMN address VARCHAR(500)"))
+                if "birth_date" not in col_names:
+                    await conn.execute(text("ALTER TABLE users ADD COLUMN birth_date VARCHAR(20)"))
+                if "gender" not in col_names:
+                    await conn.execute(text("ALTER TABLE users ADD COLUMN gender VARCHAR(20)"))
+        except Exception as e:
+            import logging
+            logging.getLogger("uvicorn").warning(f"migration profile columns failed: {e}")
+
         try:
             if driver == "postgresql":
                 await conn.execute(text(

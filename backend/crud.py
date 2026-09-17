@@ -5,7 +5,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
-from sqlalchemy import delete, func, select, text, update
+from sqlalchemy import and_, delete, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings
@@ -57,7 +57,10 @@ async def _ensure_default_settings(session: AsyncSession):
 
 
 # ============ AUTH ============
-async def create_user(full_name: str, email: str, password: str, role: str) -> Tuple[bool, str]:
+async def create_user(
+    full_name: str, email: str, password: str, role: str,
+    phone: str = "", address: str = "", birth_date: str = "", gender: str = "",
+) -> Tuple[bool, str]:
     if role not in {"client", "boutique"}:
         return False, "Role invalide."
     if len(password) < 6:
@@ -71,6 +74,10 @@ async def create_user(full_name: str, email: str, password: str, role: str) -> T
                 password_hash=pwd_hash,
                 password_salt=salt,
                 role=UserRole(role),
+                phone=phone.strip() or None,
+                address=address.strip() or None,
+                birth_date=birth_date.strip() or None,
+                gender=gender.strip() or None,
             )
             session.add(user)
             await session.flush()
@@ -110,6 +117,10 @@ async def login_user(email: str, password: str) -> Tuple[bool, str, Optional[Dic
             "email": row.email,
             "role": row.role.value,
             "is_verified": bool(row.is_verified),
+            "phone": row.phone or "",
+            "address": row.address or "",
+            "birth_date": row.birth_date or "",
+            "gender": row.gender or "",
         }
 
 
@@ -125,7 +136,34 @@ async def get_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
             "email": row.email,
             "role": row.role.value,
             "is_verified": bool(row.is_verified),
+            "phone": row.phone or "",
+            "address": row.address or "",
+            "birth_date": row.birth_date or "",
+            "gender": row.gender or "",
         }
+
+
+async def update_user_profile(
+    user_id: int,
+    full_name: str = "",
+    phone: str = "",
+    address: str = "",
+    birth_date: str = "",
+    gender: str = "",
+) -> Tuple[bool, str]:
+    async with async_session() as session:
+        result = await session.execute(select(User).where(User.id == user_id))
+        row = result.scalar_one_or_none()
+        if not row:
+            return False, "Utilisateur introuvable."
+        if full_name.strip():
+            row.full_name = full_name.strip()
+        row.phone = phone.strip() or None
+        row.address = address.strip() or None
+        row.birth_date = birth_date.strip() or None
+        row.gender = gender.strip() or None
+        await session.commit()
+    return True, "Profil mis a jour."
 
 
 async def save_verification_code(user_id: int, code: str) -> None:
@@ -236,6 +274,32 @@ async def get_shop_details(shop_id: int) -> Optional[Dict[str, Any]]:
         if not row:
             return None
         return {c.name: getattr(row, c.name) for c in Shop.__table__.columns}
+
+
+async def list_shops() -> List[Dict[str, Any]]:
+    async with async_session() as session:
+        result = await session.execute(
+            select(
+                Shop.id, Shop.shop_name, Shop.description,
+                Shop.logo_url, Shop.banner_url,
+                func.count(Product.id).label("product_count"),
+            )
+            .outerjoin(Product, and_(Product.shop_id == Shop.id, Product.is_active == 1))
+            .group_by(Shop.id)
+            .order_by(Shop.shop_name)
+        )
+        rows = result.all()
+        return [
+            {
+                "id": r.id,
+                "shop_name": r.shop_name,
+                "description": r.description,
+                "logo_url": r.logo_url,
+                "banner_url": r.banner_url,
+                "product_count": r.product_count,
+            }
+            for r in rows
+        ]
 
 
 async def update_shop(

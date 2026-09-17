@@ -77,6 +77,19 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     role: str = "client"
+    phone: str = ""
+    address: str = ""
+    birth_date: str = ""
+    gender: str = ""
+
+
+class UpdateProfileRequest(BaseModel):
+    user_id: int
+    full_name: str = ""
+    phone: str = ""
+    address: str = ""
+    birth_date: str = ""
+    gender: str = ""
 
 
 class LoginRequest(BaseModel):
@@ -268,7 +281,10 @@ class ShopCreateRequest(BaseModel):
 # ============ AUTH ============
 @app.post("/api/auth/register")
 async def register(req: RegisterRequest):
-    ok, msg = await db.create_user(req.full_name, req.email, req.password, req.role)
+    ok, msg = await db.create_user(
+        req.full_name, req.email, req.password, req.role,
+        req.phone, req.address, req.birth_date, req.gender,
+    )
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
     _, _, user = await db.login_user(req.email, req.password)
@@ -320,6 +336,17 @@ async def get_user(req: UserIdRequest):
     if not user:
         raise HTTPException(status_code=404, detail="Utilisateur introuvable")
     return {"ok": True, "user": user}
+
+
+@app.post("/api/users/update")
+async def update_user(req: UpdateProfileRequest):
+    ok, msg = await db.update_user_profile(
+        req.user_id, req.full_name, req.phone, req.address, req.birth_date, req.gender,
+    )
+    if not ok:
+        raise HTTPException(status_code=404, detail=msg)
+    user = await db.get_user_by_id(req.user_id)
+    return {"ok": True, "message": msg, "user": user}
 
 
 # ============ MOT DE PASSE OUBLIE ============
@@ -422,6 +449,12 @@ async def get_product(product_id: int):
 async def list_shop_products(shop_id: int):
     products = await db.list_shop_products(shop_id)
     return {"ok": True, "products": products}
+
+
+@app.get("/api/shops")
+async def list_all_shops():
+    shops = await db.list_shops()
+    return {"ok": True, "shops": shops}
 
 
 @app.post("/api/products/add")

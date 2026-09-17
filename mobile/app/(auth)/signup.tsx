@@ -39,7 +39,15 @@ export default function SignupScreen() {
 
     setError('');
     setLoading(true);
-    const res = await api.register(fullName.trim(), email.trim(), password, 'client');
+    const birthDate = birthDay && birthMonth && birthYear
+      ? `${birthDay.padStart(2, '0')}/${birthMonth.padStart(2, '0')}/${birthYear}`
+      : '';
+    const res = await api.register(fullName.trim(), email.trim(), password, 'client', {
+      phone: '',
+      address: address.trim(),
+      birth_date: birthDate,
+      gender,
+    });
     setLoading(false);
     if (res.ok) {
       // Tente une connexion pour récupérer l'utilisateur → direction vérification
@@ -85,11 +93,17 @@ export default function SignupScreen() {
 
           <Pressable onPress={() => setTerms(!terms)} style={styles.checkRow}>
             <Ionicons name={terms ? 'checkbox' : 'square-outline'} size={22} color={terms ? Colors.primary : Colors.textLight} />
-            <Text style={styles.checkText}>J'accepte les <Text style={styles.link}>conditions d'utilisation</Text></Text>
+            <Text style={styles.checkText}>
+              J'accepte les{' '}
+              <Text style={styles.link} onPress={() => router.push('/terms')}>conditions d'utilisation</Text>
+            </Text>
           </Pressable>
           <Pressable onPress={() => setPrivacy(!privacy)} style={styles.checkRow}>
             <Ionicons name={privacy ? 'checkbox' : 'square-outline'} size={22} color={privacy ? Colors.primary : Colors.textLight} />
-            <Text style={styles.checkText}>J'accepte la <Text style={styles.link}>politique de confidentialité</Text></Text>
+            <Text style={styles.checkText}>
+              J'accepte la{' '}
+              <Text style={styles.link} onPress={() => router.push('/privacy')}>politique de confidentialité</Text>
+            </Text>
           </Pressable>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}

@@ -68,6 +68,10 @@ export default function ProfileScreen() {
               </View>
             ) : null}
             {user?.email ? <Text style={styles.email}>{user.email}</Text> : null}
+            <Pressable style={styles.editBtn} onPress={() => router.push('/profile-edit')}>
+              <Ionicons name="create-outline" size={16} color={Colors.primary} />
+              <Text style={styles.editBtnText}>Modifier le profil</Text>
+            </Pressable>
           </View>
         </View>
 
@@ -121,6 +125,8 @@ const styles = StyleSheet.create({
   badge: { backgroundColor: Colors.primaryLight, borderRadius: Radius.full, paddingHorizontal: 12, paddingVertical: 3, marginTop: 8, alignSelf: 'center' },
   badgeText: { color: Colors.primary, fontSize: 12, fontWeight: '700', textTransform: 'capitalize' },
   email: { color: Colors.textSecondary, fontSize: 14, marginTop: 8, textAlign: 'center' },
+  editBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 8, alignSelf: 'center' },
+  editBtnText: { fontSize: 13, fontWeight: '700', color: Colors.primary },
   separator: { height: 1, backgroundColor: Colors.border },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   infoTextWrap: { flex: 1 },

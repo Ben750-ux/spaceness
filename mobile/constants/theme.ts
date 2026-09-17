@@ -1,10 +1,10 @@
 // Palette de couleurs Spaceness
-// Bleu principal #009fe3, vert succès #10b981, ambre accent
+// Bleu principal #0067c9 (teinte sombre), vert succès #10b981, ambre accent
 
 export const Colors = {
-  primary: '#009fe3',
-  primaryDark: '#0b6fb8',
-  primaryLight: '#e0f4ff',
+  primary: '#0067c9',
+  primaryDark: '#004d99',
+  primaryLight: '#dcebff',
   secondary: '#10b981',
   secondaryLight: '#d1fae5',
   accent: '#f59e0b',

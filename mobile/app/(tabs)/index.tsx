@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View, RefreshControl, Modal } from 'react-native';
+import { ActivityIndicator, FlatList, Linking, Pressable, StyleSheet, Text, View, RefreshControl, Modal } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,9 +8,9 @@ import { useAuth } from '@/context/AuthContext';
 import { ProductCard } from '@/components/ProductCard';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import * as api from '@/lib/api';
-import type { Product } from '@/lib/types';
+import type { Product, Shop } from '@/lib/types';
 
-const CATEGORIES = ['Tous', 'Tech', 'Mode', 'Maison', 'Alimentaire', 'Beauté', 'Sport', 'Autre'];
+const CATEGORIES = ['Tous', 'Tech', 'Mode', 'Maison', 'Beauté', 'Sport', 'Autre'];
 
 export default function MarketScreen() {
   const router = useRouter();
@@ -19,7 +20,12 @@ export default function MarketScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [category, setCategory] = useState('Tous');
   const [favIds, setFavIds] = useState<Set<number>>(new Set());
+  const [shops, setShops] = useState<Shop[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    api.listShops().then(setShops);
+  }, []);
 
   const loadProducts = useCallback(async (cat: string) => {
     try {
@@ -128,6 +134,38 @@ export default function MarketScreen() {
           columnWrapperStyle={styles.gridRow}
           contentContainerStyle={styles.gridContent}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
+          ListHeaderComponent={
+            shops.length > 0 ? (
+              <View style={styles.shopsSection}>
+                <View style={styles.shopsHeader}>
+                  <Text style={styles.sectionTitle}>Nos boutiques</Text>
+                  <Pressable onPress={() => router.push('/search')}>
+                    <Text style={styles.sectionMore}>Voir tout</Text>
+                  </Pressable>
+                </View>
+                <FlatList
+                  data={shops}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyExtractor={(item) => String(item.id)}
+                  contentContainerStyle={styles.shopRow}
+                  renderItem={({ item }) => (
+                    <Pressable onPress={() => router.push(`/shop/${item.id}`)} style={styles.shopCard}>
+                      {item.logo_url ? (
+                        <Image source={{ uri: item.logo_url }} style={styles.shopLogo} contentFit="cover" />
+                      ) : (
+                        <View style={styles.shopLogoPlaceholder}>
+                          <Ionicons name="storefront-outline" size={26} color={Colors.primary} />
+                        </View>
+                      )}
+                      <Text style={styles.shopName} numberOfLines={1}>{item.shop_name}</Text>
+                      <Text style={styles.shopCount}>{item.product_count ?? 0} produit(s)</Text>
+                    </Pressable>
+                  )}
+                />
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="storefront-outline" size={48} color={Colors.textLight} />
@@ -158,6 +196,7 @@ export default function MarketScreen() {
           <DrawerItem icon="heart-outline" label="Favoris" onPress={() => { setMenuOpen(false); router.push('/favorites'); }} />
           <DrawerItem icon="time-outline" label="Historique" onPress={() => { setMenuOpen(false); router.push('/history'); }} />
           <DrawerItem icon="chatbubbles-outline" label="Contacter l'admin" onPress={() => { setMenuOpen(false); router.push('/contact'); }} />
+          <DrawerItem icon="help-circle-outline" label="Aide" onPress={() => { setMenuOpen(false); Linking.openURL('https://spaceness-sitevitrine.netlify.app/#help'); }} />
           <View style={styles.drawerDivider} />
           <DrawerItem icon="log-out-outline" label="Se déconnecter" danger onPress={handleLogout} />
         </View>
@@ -195,9 +234,19 @@ const styles = StyleSheet.create({
   catText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
   catTextActive: { color: '#fff' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  gridContent: { paddingHorizontal: 16, paddingBottom: 24 },
+  gridContent: { paddingHorizontal: 16, paddingBottom: 24, paddingTop: 4 },
   gridRow: { gap: 10, marginBottom: 10 },
   cardWrap: { flex: 1 },
+  shopsSection: { marginBottom: 10 },
+  shopsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, paddingBottom: 10 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
+  sectionMore: { fontSize: 13, fontWeight: '700', color: Colors.primary },
+  shopRow: { gap: 12, paddingBottom: 6 },
+  shopCard: { width: 132, backgroundColor: Colors.surface, borderRadius: Radius.md, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: Colors.border },
+  shopLogo: { width: 64, height: 64, borderRadius: 32, marginBottom: 8, backgroundColor: Colors.surfaceMuted },
+  shopLogoPlaceholder: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.surfaceMuted, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  shopName: { fontSize: 13, fontWeight: '700', color: Colors.text, textAlign: 'center' },
+  shopCount: { fontSize: 11, color: Colors.textLight, marginTop: 2 },
   empty: { alignItems: 'center', paddingVertical: 60, gap: 12 },
   emptyText: { color: Colors.textSecondary, fontSize: 15 },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },

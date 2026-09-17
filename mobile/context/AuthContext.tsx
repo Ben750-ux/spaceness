@@ -2,7 +2,7 @@
 // Remplace la classe ShopMobileApp de main.py.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as api from '@/lib/api';
 import type { CartItem, User } from '@/lib/types';
 
@@ -85,30 +85,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     persistUser(u);
   }, [persistUser]);
 
+  const cartRef = useRef<CartItem[]>([]);
+  useEffect(() => { cartRef.current = cart; }, [cart]);
+
   const addToCart = useCallback((item: Omit<CartItem, 'qty'> & { qty?: number }) => {
     const qty = item.qty || 1;
     if (qty <= 0) return { ok: false, message: 'Quantité invalide.' };
 
-    let result: { ok: boolean; message: string } = { ok: true, message: 'Ajouté au panier.' };
+    const existing = cartRef.current.find((i) => i.product_id === item.product_id);
+    const stock = item.stock;
+
+    if (existing) {
+      const newQty = existing.qty + qty;
+      if (stock !== undefined && newQty > stock) {
+        return { ok: false, message: 'Stock insuffisant pour cette quantité.' };
+      }
+    } else if (stock !== undefined && qty > stock) {
+      return { ok: false, message: 'Stock insuffisant.' };
+    }
 
     setCart((prev) => {
-      const existing = prev.find((i) => i.product_id === item.product_id);
-      const stock = item.stock;
-      if (existing) {
-        const newQty = existing.qty + qty;
-        if (stock !== undefined && newQty > stock) {
-          result = { ok: false, message: 'Stock insuffisant pour cette quantité.' };
-          return prev;
-        }
-        return prev.map((i) => (i.product_id === item.product_id ? { ...i, qty: newQty } : i));
-      }
-      if (stock !== undefined && qty > stock) {
-        result = { ok: false, message: 'Stock insuffisant.' };
-        return prev;
+      const ex = prev.find((i) => i.product_id === item.product_id);
+      if (ex) {
+        return prev.map((i) => (i.product_id === item.product_id ? { ...i, qty: ex.qty + qty } : i));
       }
       return [...prev, { product_id: item.product_id, name: item.name, price: item.price, qty, image_url: item.image_url, shop_name: item.shop_name, shop_id: item.shop_id, stock: item.stock }];
     });
-    return result;
+    return { ok: true, message: 'Ajouté au panier.' };
   }, []);
 
   const removeFromCart = useCallback((productId: number) => {

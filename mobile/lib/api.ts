@@ -69,8 +69,29 @@ export async function login(email: string, password: string): Promise<LoginRespo
   }
 }
 
-export async function register(fullName: string, email: string, password: string, role = 'client') {
-  return request<{ ok: boolean; message?: string }>('POST', '/api/auth/register', { full_name: fullName, email, password, role });
+export async function register(fullName: string, email: string, password: string, role = 'client', extra?: { phone?: string; address?: string; birth_date?: string; gender?: string }) {
+  try {
+    return await request<{ ok: boolean; message?: string }>('POST', '/api/auth/register', {
+      full_name: fullName, email, password, role,
+      phone: extra?.phone || '',
+      address: extra?.address || '',
+      birth_date: extra?.birth_date || '',
+      gender: extra?.gender || '',
+    });
+  } catch (e) {
+    return { ok: false, message: (e as Error).message || 'Erreur lors de la création du compte.' };
+  }
+}
+
+export async function updateProfile(userId: number, fields: { full_name?: string; phone?: string; address?: string; birth_date?: string; gender?: string }): Promise<{ ok: boolean; message?: string; user?: User }> {
+  try {
+    return await request<{ ok: boolean; message?: string; user?: User }>('POST', '/api/users/update', {
+      user_id: userId,
+      ...fields,
+    });
+  } catch (e) {
+    return { ok: false, message: (e as Error).message || 'Erreur lors de la mise à jour.' };
+  }
 }
 
 export async function getUserById(userId: number): Promise<User | null> {
@@ -147,6 +168,15 @@ export async function listShopProducts(shopId: number): Promise<Product[]> {
 }
 
 // ============ BOUTIQUES ============
+export async function listShops(): Promise<Shop[]> {
+  try {
+    const res = await request<{ ok: boolean; shops: Shop[] }>('GET', '/api/shops');
+    return res.shops || [];
+  } catch {
+    return [];
+  }
+}
+
 export async function getShopDetails(shopId: number): Promise<Shop | null> {
   try {
     const res = await request<{ ok: boolean; shop: Shop }>('GET', `/api/shops/${shopId}`);

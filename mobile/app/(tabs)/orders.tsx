@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Modal, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
@@ -28,11 +28,13 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default function OrdersScreen() {
+  const router = useRouter();
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<Filter>('active');
+  const [qrOrder, setQrOrder] = useState<Order | null>(null);
 
   const loadOrders = useCallback(async () => {
     if (!user) return;
@@ -103,23 +105,28 @@ export default function OrdersScreen() {
               <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
               <Text style={[styles.statusText, { color: statusColor }]}>{statusLabel}</Text>
             </View>
-            {filter === 'active' && !isDeliveredGroup ? (
-              <Pressable onPress={() => showDeliveryCode(item)} hitSlop={8} style={styles.actionBtn}>
-                <Ionicons name="qr-code" size={20} color={Colors.primary} />
+            <View style={styles.cardActions}>
+              {filter === 'active' && !isDeliveredGroup ? (
+                <Pressable onPress={() => setQrOrder(item)} hitSlop={8} style={styles.actionBtn}>
+                  <Ionicons name="qr-code" size={20} color={Colors.primary} />
+                </Pressable>
+              ) : null}
+              <Pressable
+                onPress={() => item.shop_id ? router.push(`/shop/${item.shop_id}`) : null}
+                hitSlop={8}
+                style={styles.shopBtn}
+              >
+                <Ionicons name="storefront-outline" size={15} color={Colors.primary} />
+                <Text style={styles.shopBtnText}>Boutique</Text>
               </Pressable>
-            ) : null}
+            </View>
           </View>
         </View>
       </View>
     );
   };
 
-  const showDeliveryCode = useCallback((order: Order) => {
-    Alert.alert(
-      'Code de retrait',
-      order.delivery_code ? `Code : ${order.delivery_code}` : 'Aucun code disponible pour cette commande.',
-    );
-  }, []);
+  const qrUrl = qrOrder ? `${api.API_URL}/api/orders/qr/${qrOrder.id}` : null;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
@@ -164,6 +171,33 @@ export default function OrdersScreen() {
           renderItem={renderOrder}
         />
       )}
+
+      <Modal
+        visible={!!qrOrder}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setQrOrder(null)}
+      >
+        <View style={styles.modalBackdrop}>
+          <Pressable style={styles.modalBackdropTouch} onPress={() => setQrOrder(null)} />
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Code de retrait</Text>
+              <Pressable onPress={() => setQrOrder(null)} hitSlop={8}>
+                <Ionicons name="close" size={24} color={Colors.text} />
+              </Pressable>
+            </View>
+            {qrUrl ? (
+              <Image source={{ uri: qrUrl }} style={styles.qrImage} contentFit="contain" transition={150} />
+            ) : null}
+            <Text style={styles.qrHint}>Commande #{qrOrder?.id}</Text>
+            <View style={styles.qrCodePill}>
+              <Text style={styles.qrCodeText}>{qrOrder?.delivery_code ? `Code : ${qrOrder.delivery_code}` : 'Aucun code'}</Text>
+            </View>
+            <Text style={styles.modalNote}>Présentez ce QR code au livreur ou à la boutique pour retirer votre commande.</Text>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -224,6 +258,18 @@ const styles = StyleSheet.create({
   statusDot: { width: 7, height: 7, borderRadius: 4 },
   statusText: { fontSize: 12, fontWeight: '600' },
   actionBtn: { width: 32, height: 32, borderRadius: Radius.sm, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  cardActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  shopBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  shopBtnText: { fontSize: 12, fontWeight: '700', color: Colors.primary },
   empty: { alignItems: 'center', paddingVertical: 60, gap: 4 },
   emptyIconWrap: {
     width: 84,
@@ -236,4 +282,36 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { fontSize: 17, fontWeight: '700', color: Colors.text },
   emptySubtitle: { fontSize: 13, color: Colors.textSecondary, marginTop: 6 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalBackdropTouch: { flex: 1 },
+  modalCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 8,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
+  qrImage: { width: 220, height: 220, marginVertical: 16 },
+  qrHint: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary, marginBottom: 12 },
+  qrCodePill: {
+    backgroundColor: Colors.primaryLight,
+    borderRadius: Radius.full,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginBottom: 16,
+  },
+  qrCodeText: { fontSize: 15, fontWeight: '800', color: Colors.primary },
+  modalNote: { fontSize: 12, color: Colors.textLight, textAlign: 'center' },
 });

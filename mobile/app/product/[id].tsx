@@ -15,6 +15,8 @@ import { useAuth } from '@/context/AuthContext';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import * as api from '@/lib/api';
 import type { Product, Review } from '@/lib/types';
+import { Button } from '@/components/ui/Button';
+import { TextField } from '@/components/ui/TextField';
 
 function Stars({ rating, size = 16 }: { rating: number; size?: number }) {
   const full = Math.floor(rating);
@@ -48,6 +50,10 @@ export default function ProductDetailScreen() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [qty, setQty] = useState(1);
   const [cartMessage, setCartMessage] = useState<string | null>(null);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewMsg, setReviewMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!productId) return;
@@ -101,6 +107,34 @@ export default function ProductDetailScreen() {
       setTimeout(() => setCartMessage(null), 3000);
     }
   }, [product, qty, addToCart]);
+
+  const handleSubmitReview = useCallback(async () => {
+    if (!user || !product) return;
+    if (reviewRating < 1) {
+      setReviewMsg('Choisissez une note.');
+      return;
+    }
+    if (!reviewComment.trim()) {
+      setReviewMsg('Écrivez un commentaire.');
+      return;
+    }
+    setReviewMsg(null);
+    setSubmittingReview(true);
+    try {
+      await api.addReview(user.id, product.id, reviewRating, reviewComment.trim());
+      setReviewMsg('Avis publié ✓');
+      setReviewComment('');
+      setReviewRating(0);
+      const revData = await api.getProductReviews(product.id);
+      setReviews(revData.reviews);
+      setRating(revData.rating);
+      setReviewCount(revData.count);
+    } catch {
+      setReviewMsg("Échec de l'envoi de l'avis. Réessayez.");
+    } finally {
+      setSubmittingReview(false);
+    }
+  }, [user, product, reviewRating, reviewComment]);
 
   if (loading) {
     return (
@@ -243,6 +277,43 @@ export default function ProductDetailScreen() {
                 </View>
               ))
             )}
+
+            {user ? (
+              <View style={styles.reviewForm}>
+                <Text style={styles.reviewFormTitle}>Laisser un avis</Text>
+                <View style={styles.ratingInputRow}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Pressable key={n} onPress={() => setReviewRating(n)} hitSlop={6}>
+                      <Ionicons
+                        name={n <= reviewRating ? 'star' : 'star-outline'}
+                        size={30}
+                        color={n <= reviewRating ? Colors.accent : Colors.textLight}
+                      />
+                    </Pressable>
+                  ))}
+                </View>
+                <TextField
+                  label="Votre commentaire"
+                  placeholder="Partagez votre expérience..."
+                  value={reviewComment}
+                  onChangeText={setReviewComment}
+                  multiline
+                  maxLength={500}
+                />
+                <Button
+                  title="Publier l'avis"
+                  onPress={handleSubmitReview}
+                  loading={submittingReview}
+                  icon="create-outline"
+                  size="sm"
+                />
+                {reviewMsg ? (
+                  <Text style={[styles.reviewStatus, { color: reviewMsg === 'Avis publié ✓' ? Colors.secondary : Colors.danger }]}>
+                    {reviewMsg}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
           </View>
         </ScrollView>
       </View>
@@ -471,6 +542,32 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     color: Colors.textSecondary,
+  },
+  reviewForm: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    padding: 14,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 4,
+  },
+  reviewFormTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  ratingInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  reviewStatus: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 8,
   },
   footer: {
     backgroundColor: Colors.surface,

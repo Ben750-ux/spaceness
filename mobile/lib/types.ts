@@ -40,6 +40,7 @@ export interface Shop {
   logo_url?: string;
   banner_url?: string;
   is_active?: number | boolean;
+  product_count?: number;
 }
 
 export interface Order {

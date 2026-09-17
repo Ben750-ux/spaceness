@@ -51,6 +51,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isFavorite, o
             </View>
           ) : null}
         </View>
+        {product.shop_id ? (
+          <Pressable onPress={() => router.push(`/shop/${product.shop_id}`)} style={styles.shopBtn} hitSlop={6}>
+            <Ionicons name="storefront-outline" size={14} color={Colors.primary} />
+            <Text style={styles.shopBtnText}>Voir la boutique</Text>
+          </Pressable>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -109,4 +115,16 @@ const styles = StyleSheet.create({
   price: { fontSize: 16, fontWeight: '800', color: Colors.primary },
   rating: { flexDirection: 'row', alignItems: 'center' },
   ratingText: { fontSize: 13, color: Colors.textSecondary, marginLeft: 2, fontWeight: '600' },
+  shopBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    marginTop: 10,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    paddingVertical: 7,
+  },
+  shopBtnText: { fontSize: 12, fontWeight: '700', color: Colors.primary },
 });

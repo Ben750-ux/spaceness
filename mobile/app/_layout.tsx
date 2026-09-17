@@ -26,7 +26,9 @@ function RootNavigator() {
         <Stack.Screen name="favorites" />
         <Stack.Screen name="history" />
         <Stack.Screen name="contact" />
-        <Stack.Screen name="search" />
+        <Stack.Screen name="terms" />
+        <Stack.Screen name="privacy" />
+        <Stack.Screen name="profile-edit" />
       </Stack>
     </View>
   );

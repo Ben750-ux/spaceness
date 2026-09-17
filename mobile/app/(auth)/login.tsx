@@ -102,11 +102,12 @@ export default function LoginScreen() {
             <View style={styles.divider} />
           </View>
 
-          <Link href="/signup" asChild>
-            <Pressable>
-              <Button title="Créer un compte" variant="outline" icon="person-add-outline" />
-            </Pressable>
-          </Link>
+          <Button
+            title="Créer un compte"
+            variant="outline"
+            icon="person-add-outline"
+            onPress={() => router.push('/signup')}
+          />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
