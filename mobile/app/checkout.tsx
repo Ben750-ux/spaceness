@@ -74,7 +74,7 @@ export default function CheckoutScreen() {
 
   if (success) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
         <View style={styles.successWrap}>
           <Ionicons name="checkmark-circle" size={72} color={Colors.secondary} />
           <Text style={styles.successTitle}>Commande confirmée!</Text>
@@ -86,7 +86,7 @@ export default function CheckoutScreen() {
 
   if (cart.length === 0) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Paiement & livraison</Text>
         </View>
@@ -103,7 +103,7 @@ export default function CheckoutScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Paiement & livraison</Text>
       </View>

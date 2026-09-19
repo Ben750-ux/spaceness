@@ -1,10 +1,11 @@
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ui/Screen';
 import { Colors, Spacing } from '@/constants/theme';
 
 export default function TermsScreen() {
   return (
-    <View style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
       <ScreenHeader title="Conditions d'utilisation" subtitle="Spaceness" />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.date}>Dernière mise à jour : 15/04/2026</Text>
@@ -84,7 +85,7 @@ export default function TermsScreen() {
           cas de litige, les tribunaux de la République démocratique du Congo seront compétents.
         </Text>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

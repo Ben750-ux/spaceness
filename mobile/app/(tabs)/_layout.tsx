@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router';
 import { Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
 import { useNotifications } from '@/context/NotificationsContext';
 import { Colors } from '@/constants/theme';
@@ -18,6 +19,7 @@ function CountBadge({ count }: { count: number }) {
 export default function TabsLayout() {
   const { user, loading, cartCount } = useAuth();
   const { unread } = useNotifications();
+  const insets = useSafeAreaInsets();
 
   if (!loading && (!user || user.role !== 'client')) {
     return <Redirect href="/(auth)/login" />;
@@ -29,7 +31,7 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textLight,
-        tabBarStyle: { height: 64, paddingTop: 8, paddingBottom: 10, backgroundColor: Colors.surface, borderTopColor: Colors.border },
+        tabBarStyle: { height: 64 + insets.bottom, paddingTop: 8, paddingBottom: Math.max(10, insets.bottom), backgroundColor: Colors.surface, borderTopColor: Colors.border },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
       }}
     >

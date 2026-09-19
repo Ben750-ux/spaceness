@@ -1,10 +1,11 @@
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ui/Screen';
 import { Colors, Spacing } from '@/constants/theme';
 
 export default function PrivacyScreen() {
   return (
-    <View style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
       <ScreenHeader title="Politique de confidentialité" subtitle="Spaceness" />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.date}>Dernière mise à jour : 15/04/2026</Text>
@@ -81,7 +82,7 @@ export default function PrivacyScreen() {
         <Text style={styles.bullet}>• spaceness15@gmail.com</Text>
         <Text style={styles.bullet}>• Lubumbashi / Kasanguku / Coin du Carmel</Text>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

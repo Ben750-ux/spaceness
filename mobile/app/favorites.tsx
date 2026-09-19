@@ -37,7 +37,7 @@ export default function FavoritesScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
         <ScreenHeader title="Favoris" />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={Colors.primary} />
@@ -47,7 +47,7 @@ export default function FavoritesScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
       <ScreenHeader title="Favoris" />
       {products.length === 0 ? (
         <EmptyState icon="heart-outline" title="Aucun favori" subtitle="Ajoutez des produits à vos favoris" />

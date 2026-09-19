@@ -1525,7 +1525,13 @@ async def get_activity_log(limit: int = 100) -> List[Dict[str, Any]]:
             .limit(limit)
         )
         rows = result.scalars().all()
-        return [{c.name: getattr(r, c.name) for c in ActivityLog.__table__.columns} for r in rows]
+        out = []
+        for r in rows:
+            d = {c.name: getattr(r, c.name) for c in ActivityLog.__table__.columns}
+            d["description"] = d.get("details")
+            d["timestamp"] = d.get("created_at")
+            out.append(d)
+        return out
 
 
 async def log_activity(user_id: Any = None, user_name: str = "", action: str = "", details: str = "") -> bool:
