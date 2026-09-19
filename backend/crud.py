@@ -1165,10 +1165,14 @@ async def get_notifications() -> Dict[str, int]:
     client = await count_unread_messages()
     vendor = await count_unread_vendor_messages()
     pending = await count_pending_orders()
+    async with async_session() as session:
+        last = await session.execute(select(func.max(ActivityLog.id)))
+        last_activity_id = last.scalar() or 0
     return {
         "unread_client_messages": client,
         "unread_shop_messages": vendor,
         "pending_orders": pending,
+        "last_activity_id": last_activity_id,
     }
 
 
