@@ -1640,6 +1640,16 @@ async def get_monthly_stats() -> List[Dict[str, Any]]:
 # ============ CONVERSATIONS ============
 async def get_client_conversations() -> List[Dict[str, Any]]:
     async with async_session() as session:
+        unread_subq = (
+            select(
+                AdminMessage.user_id.label("uid"),
+                func.count(AdminMessage.id).label("unread"),
+            )
+            .where(AdminMessage.is_read == 0)
+            .where(AdminMessage.is_from_admin == 0)
+            .group_by(AdminMessage.user_id)
+            .subquery()
+        )
         subq = (
             select(
                 AdminMessage.user_id,
@@ -1652,9 +1662,11 @@ async def get_client_conversations() -> List[Dict[str, Any]]:
             select(
                 AdminMessage, User.full_name, User.email,
                 subq.c.last_msg,
+                func.coalesce(unread_subq.c.unread, 0).label("unread_count"),
             )
             .join(subq, AdminMessage.user_id == subq.c.user_id)
             .join(User, AdminMessage.user_id == User.id)
+            .outerjoin(unread_subq, AdminMessage.user_id == unread_subq.c.uid)
             .where(AdminMessage.created_at == subq.c.last_msg)
             .order_by(subq.c.last_msg.desc())
         )
@@ -1664,12 +1676,23 @@ async def get_client_conversations() -> List[Dict[str, Any]]:
             d = {c.name: getattr(r.AdminMessage, c.name) for c in AdminMessage.__table__.columns}
             d["full_name"] = r.full_name
             d["email"] = r.email
+            d["unread_count"] = r.unread_count
             rows.append(d)
         return rows
 
 
 async def get_shop_conversations() -> List[Dict[str, Any]]:
     async with async_session() as session:
+        unread_subq = (
+            select(
+                VendorAdminMessage.shop_id.label("shop_id2"),
+                func.count(VendorAdminMessage.id).label("unread"),
+            )
+            .where(VendorAdminMessage.is_read == 0)
+            .where(VendorAdminMessage.is_from_vendor == 1)
+            .group_by(VendorAdminMessage.shop_id)
+            .subquery()
+        )
         subq = (
             select(
                 VendorAdminMessage.shop_id,
@@ -1682,9 +1705,11 @@ async def get_shop_conversations() -> List[Dict[str, Any]]:
             select(
                 VendorAdminMessage, Shop.shop_name,
                 subq.c.last_msg,
+                func.coalesce(unread_subq.c.unread, 0).label("unread_count"),
             )
             .join(subq, VendorAdminMessage.shop_id == subq.c.shop_id)
             .join(Shop, VendorAdminMessage.shop_id == Shop.id)
+            .outerjoin(unread_subq, VendorAdminMessage.shop_id == unread_subq.c.shop_id2)
             .where(VendorAdminMessage.created_at == subq.c.last_msg)
             .order_by(subq.c.last_msg.desc())
         )
@@ -1693,6 +1718,7 @@ async def get_shop_conversations() -> List[Dict[str, Any]]:
         for r in result.all():
             d = {c.name: getattr(r.VendorAdminMessage, c.name) for c in VendorAdminMessage.__table__.columns}
             d["shop_name"] = r.shop_name
+            d["unread_count"] = r.unread_count
             rows.append(d)
         return rows
 
