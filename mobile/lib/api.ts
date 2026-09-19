@@ -29,24 +29,37 @@ function buildUrl(path: string, params?: Record<string, string | number | undefi
   return qs ? `${url}?${qs}` : url;
 }
 
-async function request<T>(method: string, path: string, data?: unknown, params?: Record<string, string | number | undefined>, timeout = 30000): Promise<T> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeout);
-  try {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    const res = await fetch(buildUrl(path, params), {
-      method,
-      headers,
-      body: data !== undefined ? JSON.stringify(data) : undefined,
-      signal: controller.signal,
-    });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok && !json.ok) {
-      throw new ApiError(res.status, json.detail || json.message || `Erreur ${res.status}`);
+async function request<T>(method: string, path: string, data?: unknown, params?: Record<string, string | number | undefined>, timeout = 60000, retry = true): Promise<T> {
+  const attempt = async (): Promise<T> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const res = await fetch(buildUrl(path, params), {
+        method,
+        headers,
+        body: data !== undefined ? JSON.stringify(data) : undefined,
+        signal: controller.signal,
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok && !json.ok) {
+        throw new ApiError(res.status, json.detail || json.message || `Erreur ${res.status}`);
+      }
+      return json as T;
+    } finally {
+      clearTimeout(timer);
     }
-    return json as T;
-  } finally {
-    clearTimeout(timer);
+  };
+  try {
+    return await attempt();
+  } catch (e) {
+    const err = e as Error;
+    const isNetwork = err.name === 'AbortError' || err instanceof TypeError;
+    if (retry && isNetwork) {
+      await new Promise((r) => setTimeout(r, 600));
+      return attempt();
+    }
+    throw e;
   }
 }
 
@@ -191,7 +204,7 @@ export async function createOrdersFromCart(userId: number, items: { product_id: 
   try {
     return await request<{ ok: boolean; message?: string; order_ids?: number[] }>('POST', '/api/orders/from-cart', {
       user_id: userId, items, delivery_address: deliveryAddress, delivery_phone: deliveryPhone,
-    });
+    }, undefined, 60000, false);
   } catch (e) {
     return { ok: false, message: (e as Error).message };
   }
