@@ -1143,6 +1143,36 @@ async def count_unread_messages() -> int:
         return result.scalar() or 0
 
 
+async def mark_admin_messages_read(user_id: int) -> bool:
+    try:
+        async with async_session() as session:
+            await session.execute(
+                update(AdminMessage)
+                .where(AdminMessage.user_id == user_id)
+                .where(AdminMessage.is_from_admin == 0)
+                .values(is_read=1)
+            )
+            await session.commit()
+        return True
+    except Exception:
+        return False
+
+
+async def mark_admin_vendor_messages_read(shop_id: int) -> bool:
+    try:
+        async with async_session() as session:
+            await session.execute(
+                update(VendorAdminMessage)
+                .where(VendorAdminMessage.shop_id == shop_id)
+                .where(VendorAdminMessage.is_from_vendor == 1)
+                .values(is_read=1)
+            )
+            await session.commit()
+        return True
+    except Exception:
+        return False
+
+
 async def count_unread_vendor_messages() -> int:
     async with async_session() as session:
         result = await session.execute(

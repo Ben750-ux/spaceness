@@ -210,6 +210,10 @@ class MarkReadRequest(BaseModel):
     message_id: int
 
 
+class ReadByUserRequest(BaseModel):
+    user_id: int
+
+
 class AppSettingsRequest(BaseModel):
     is_blocked: int
     block_message: str = ""
@@ -1028,6 +1032,14 @@ async def mark_read(req: MarkReadRequest):
     return {"ok": True}
 
 
+@app.post("/api/admin/messages/read-by-user")
+async def read_by_user(req: ReadByUserRequest):
+    ok = await db.mark_admin_messages_read(req.user_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Erreur")
+    return {"ok": True}
+
+
 @app.get("/api/admin/messages/unread-count")
 async def unread_count():
     count = await db.count_unread_messages()
@@ -1050,6 +1062,14 @@ async def mark_all_messages_read():
 async def mark_all_vendor_messages_read():
     ok = await db.mark_all_vendor_messages_read()
     return {"ok": ok}
+
+
+@app.post("/api/admin/vendor-messages/{shop_id}/read")
+async def read_vendor_by_shop(shop_id: int):
+    ok = await db.mark_admin_vendor_messages_read(shop_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Erreur")
+    return {"ok": True}
 
 
 # ============ PARAMÈTRES APP ============
