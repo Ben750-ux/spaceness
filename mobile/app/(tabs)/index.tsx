@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
+import { useNotifications } from '@/context/NotificationsContext';
 import { ProductCard } from '@/components/ProductCard';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import * as api from '@/lib/api';
@@ -15,6 +16,7 @@ const CATEGORIES = ['Tous', 'Tech', 'Mode', 'Maison', 'Beauté', 'Sport', 'Autre
 export default function MarketScreen() {
   const router = useRouter();
   const { user, cartCount, signOut } = useAuth();
+  const { unread } = useNotifications();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -195,7 +197,7 @@ export default function MarketScreen() {
           </View>
           <DrawerItem icon="heart-outline" label="Favoris" onPress={() => { setMenuOpen(false); router.push('/favorites'); }} />
           <DrawerItem icon="time-outline" label="Historique" onPress={() => { setMenuOpen(false); router.push('/history'); }} />
-          <DrawerItem icon="chatbubbles-outline" label="Contacter l'admin" onPress={() => { setMenuOpen(false); router.push('/contact'); }} />
+          <DrawerItem icon="chatbubbles-outline" label="Contacter l'admin" badge={unread} onPress={() => { setMenuOpen(false); router.push('/contact'); }} />
           <DrawerItem icon="help-circle-outline" label="Aide" onPress={() => { setMenuOpen(false); Linking.openURL('https://spaceness-sitevitrine.netlify.app/#help'); }} />
           <View style={styles.drawerDivider} />
           <DrawerItem icon="log-out-outline" label="Se déconnecter" danger onPress={handleLogout} />
@@ -205,11 +207,16 @@ export default function MarketScreen() {
   );
 }
 
-function DrawerItem({ icon, label, onPress, danger }: { icon: any; label: string; onPress: () => void; danger?: boolean }) {
+function DrawerItem({ icon, label, onPress, badge, danger }: { icon: any; label: string; onPress: () => void; badge?: number; danger?: boolean }) {
   return (
     <Pressable onPress={onPress} style={styles.drawerItem}>
       <Ionicons name={icon} size={22} color={danger ? Colors.danger : Colors.textSecondary} />
       <Text style={[styles.drawerItemText, danger && { color: Colors.danger }]}>{label}</Text>
+      {badge ? (
+        <View style={styles.drawerBadge}>
+          <Text style={styles.drawerBadgeText}>{badge > 9 ? '9+' : badge}</Text>
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -258,5 +265,7 @@ const styles = StyleSheet.create({
   drawerEmail: { fontSize: 12, color: Colors.textSecondary },
   drawerItem: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
   drawerItemText: { fontSize: 15, color: Colors.text, fontWeight: '500' },
+  drawerBadge: { marginLeft: 'auto', backgroundColor: Colors.danger, borderRadius: 9, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  drawerBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
   drawerDivider: { height: 1, backgroundColor: Colors.border, marginVertical: 8 },
 });

@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { useNotifications } from '@/context/NotificationsContext';
 import * as api from '@/lib/api';
 import type { Message } from '@/lib/types';
 import { TextField } from '@/components/ui/TextField';
@@ -12,6 +13,7 @@ import { ScreenHeader } from '@/components/ui/Screen';
 
 export default function ContactScreen() {
   const { user } = useAuth();
+  const { markAllRead } = useNotifications();
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -29,7 +31,8 @@ export default function ContactScreen() {
   useFocusEffect(
     useCallback(() => {
       load();
-    }, [load])
+      markAllRead();
+    }, [load, markAllRead])
   );
 
   const handleSend = async () => {

@@ -77,6 +77,8 @@ export interface Message {
   message: string;
   admin_reply?: string;
   is_read?: boolean | number;
+  client_read?: number;
+  is_from_admin?: number;
   created_at?: string;
 }
 

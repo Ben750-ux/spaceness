@@ -196,6 +196,7 @@ class AdminMessage(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     is_read = Column(Integer, nullable=False, default=0)
     is_from_admin = Column(Integer, nullable=False, default=0)
+    client_read = Column(Integer, nullable=False, default=0)
 
     __table_args__ = (
         Index("idx_messages_user", "user_id"),
@@ -345,3 +346,20 @@ async def init_db():
                     ))
         except Exception:
             pass
+
+        try:
+            if driver == "postgresql":
+                await conn.execute(text(
+                    "ALTER TABLE admin_messages ADD COLUMN IF NOT EXISTS client_read INTEGER DEFAULT 0"
+                ))
+            else:
+                cols = (await conn.execute(
+                    text("PRAGMA table_info(admin_messages)")
+                )).fetchall()
+                if not any(row[1] == "client_read" for row in cols):
+                    await conn.execute(text(
+                        "ALTER TABLE admin_messages ADD COLUMN client_read INTEGER DEFAULT 0"
+                    ))
+        except Exception as e:
+            import logging
+            logging.getLogger("uvicorn").warning(f"migration client_read column failed: {e}")

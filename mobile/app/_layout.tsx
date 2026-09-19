@@ -2,6 +2,7 @@ import { Slot, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { NotificationsProvider } from '@/context/NotificationsContext';
 
 function RootNavigator() {
   const { loading } = useAuth();
@@ -37,7 +38,9 @@ function RootNavigator() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RootNavigator />
+      <NotificationsProvider>
+        <RootNavigator />
+      </NotificationsProvider>
     </AuthProvider>
   );
 }

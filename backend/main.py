@@ -994,6 +994,18 @@ async def get_messages(user_id: int):
     return {"ok": True, "messages": messages}
 
 
+@app.get("/api/messages/{user_id}/unread-count")
+async def user_unread_count(user_id: int):
+    count = await db.count_unread_client_messages(user_id)
+    return {"ok": True, "count": count}
+
+
+@app.post("/api/messages/{user_id}/read")
+async def user_mark_read(user_id: int):
+    ok = await db.mark_client_messages_read(user_id)
+    return {"ok": ok}
+
+
 @app.get("/api/admin/messages")
 async def get_all_messages():
     messages = await db.get_all_messages()

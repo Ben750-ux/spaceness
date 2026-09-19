@@ -301,6 +301,12 @@ export async function sendAdminMessage(userId: number, subject: string, message:
 export async function getUserMessages(userId: number): Promise<Message[]> {
   try { const r = await request<{ ok: boolean; messages: Message[] }>('GET', `/api/messages/${userId}`, undefined, undefined, 20000); return r.messages || []; } catch { return []; }
 }
+export async function getUnreadMessageCount(userId: number): Promise<number> {
+  try { const r = await request<{ ok: boolean; count: number }>('GET', `/api/messages/${userId}/unread-count`, undefined, undefined, 20000); return r.count || 0; } catch { return 0; }
+}
+export async function markMessagesRead(userId: number): Promise<void> {
+  try { await request('POST', `/api/messages/${userId}/read`, undefined, undefined, 20000); } catch {}
+}
 export async function markMessageRead(messageId: number): Promise<void> {
   try { await request('POST', '/api/admin/messages/read', { message_id: messageId }); } catch {}
 }

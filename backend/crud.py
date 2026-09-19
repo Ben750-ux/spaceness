@@ -1046,6 +1046,7 @@ async def send_admin_message(
             msg = AdminMessage(
                 user_id=user_id, subject=subject, message=message,
                 is_from_admin=1 if is_from_admin else 0,
+                client_read=0 if is_from_admin else 1,
             )
             session.add(msg)
             await session.commit()
@@ -1088,7 +1089,7 @@ async def reply_to_message(message_id: int, reply: str) -> bool:
             await session.execute(
                 update(AdminMessage)
                 .where(AdminMessage.id == message_id)
-                .values(admin_reply=reply, replied_at=_now(), is_read=0)
+                .values(admin_reply=reply, replied_at=_now(), is_read=0, client_read=0)
             )
             await session.commit()
         return True
@@ -1101,6 +1102,30 @@ async def mark_message_read(message_id: int) -> bool:
         async with async_session() as session:
             await session.execute(
                 update(AdminMessage).where(AdminMessage.id == message_id).values(is_read=1)
+            )
+            await session.commit()
+        return True
+    except Exception:
+        return False
+
+
+async def count_unread_client_messages(user_id: int) -> int:
+    async with async_session() as session:
+        result = await session.execute(
+            select(func.count(AdminMessage.id))
+            .where(AdminMessage.user_id == user_id)
+            .where(AdminMessage.client_read == 0)
+        )
+        return result.scalar() or 0
+
+
+async def mark_client_messages_read(user_id: int) -> bool:
+    try:
+        async with async_session() as session:
+            await session.execute(
+                update(AdminMessage)
+                .where(AdminMessage.user_id == user_id)
+                .values(client_read=1)
             )
             await session.commit()
         return True

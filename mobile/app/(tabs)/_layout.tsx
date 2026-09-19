@@ -3,9 +3,10 @@ import { Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, View } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
+import { useNotifications } from '@/context/NotificationsContext';
 import { Colors } from '@/constants/theme';
 
-function CartBadge({ count }: { count: number }) {
+function CountBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
     <View style={{ position: 'absolute', top: -2, right: -8, backgroundColor: Colors.danger, borderRadius: 9, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
@@ -16,6 +17,7 @@ function CartBadge({ count }: { count: number }) {
 
 export default function TabsLayout() {
   const { user, loading, cartCount } = useAuth();
+  const { unread } = useNotifications();
 
   if (!loading && (!user || user.role !== 'client')) {
     return <Redirect href="/(auth)/login" />;
@@ -36,11 +38,16 @@ export default function TabsLayout() {
       <Tabs.Screen name="cart" options={{ title: 'Panier', tabBarIcon: ({ color, size, focused }) => (
         <View>
           <Ionicons name={focused ? 'cart' : 'cart-outline'} size={size} color={color} />
-          <CartBadge count={cartCount} />
+          <CountBadge count={cartCount} />
         </View>
       ) }} />
       <Tabs.Screen name="orders" options={{ title: 'Commandes', tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'receipt' : 'receipt-outline'} size={size} color={color} /> }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profil', tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} /> }} />
+      <Tabs.Screen name="profile" options={{ title: 'Profil', tabBarIcon: ({ color, size, focused }) => (
+        <View>
+          <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />
+          <CountBadge count={unread} />
+        </View>
+      ) }} />
     </Tabs>
   );
 }
