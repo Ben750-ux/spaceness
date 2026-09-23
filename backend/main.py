@@ -282,6 +282,15 @@ class ShopCreateRequest(BaseModel):
     contact_info: str = ""
 
 
+class AdminShopCreateRequest(BaseModel):
+    full_name: str
+    email: str
+    password: str
+    shop_name: str
+    description: str = ""
+    contact_info: str = ""
+
+
 # ============ AUTH ============
 @app.post("/api/auth/register")
 async def register(req: RegisterRequest):
@@ -517,6 +526,17 @@ async def create_shop(req: ShopCreateRequest):
         raise HTTPException(status_code=400, detail=msg)
     await db.log_activity(req.owner_user_id, None, "Creation boutique", f"Boutique '{req.shop_name}' creee")
     return {"ok": True, "message": msg}
+
+
+@app.post("/api/admin/shops/create")
+async def admin_create_shop(req: AdminShopCreateRequest):
+    ok, msg, creds = await db.admin_create_shop(
+        req.full_name, req.email, req.password, req.shop_name, req.description, req.contact_info,
+    )
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    await db.log_activity(None, req.full_name, "Creation boutique", f"Boutique '{req.shop_name}' creee")
+    return {"ok": True, "message": msg, "credentials": creds}
 
 
 @app.post("/api/shops/update")

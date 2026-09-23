@@ -1789,6 +1789,45 @@ async def login_vendor(email: str, password: str) -> Tuple[bool, str, Optional[D
         }
 
 
+async def admin_create_shop(
+    full_name: str,
+    email: str,
+    password: str,
+    shop_name: str,
+    description: str = "",
+    contact_info: str = "",
+) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+    try:
+        email = email.strip().lower()
+        if not full_name.strip() or not email or not password or not shop_name.strip():
+            return False, "Tous les champs obligatoires doivent etre remplis.", None
+        async with async_session() as session:
+            exists = await session.execute(select(User).where(User.email == email))
+            if exists.scalar_one_or_none():
+                return False, "Un compte avec cet email existe deja.", None
+            salt, pwd_hash = _hash_password(password)
+            vendor = User(
+                full_name=full_name.strip(), email=email, password_hash=pwd_hash,
+                password_salt=salt, role=UserRole.boutique, is_verified=1,
+            )
+            session.add(vendor)
+            await session.flush()
+            shop = Shop(
+                owner_user_id=vendor.id, shop_name=shop_name.strip(),
+                description=description.strip(), contact_info=contact_info.strip(),
+            )
+            session.add(shop)
+            await session.flush()
+            shop_id = shop.id
+            await session.commit()
+            return True, "Boutique creee.", {
+                "shop_id": shop_id, "full_name": full_name.strip(),
+                "email": email, "password": password,
+            }
+    except Exception:
+        return False, "Erreur lors de la creation de la boutique.", None
+
+
 async def create_shop(owner_user_id: int, shop_name: str, description: str = "", contact_info: str = "") -> Tuple[bool, str]:
     try:
         existing = await get_shop_by_owner(owner_user_id)
