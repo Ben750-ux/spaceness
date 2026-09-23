@@ -1173,6 +1173,49 @@ async def mark_admin_vendor_messages_read(shop_id: int) -> bool:
         return False
 
 
+async def count_unread_shop_messages(shop_id: int) -> int:
+    async with async_session() as session:
+        result = await session.execute(
+            select(func.count(VendorAdminMessage.id))
+            .where(VendorAdminMessage.shop_id == shop_id)
+            .where(VendorAdminMessage.is_read == 0)
+            .where(VendorAdminMessage.is_from_vendor == 0)
+        )
+        return result.scalar() or 0
+
+
+async def count_pending_orders_for_shop(shop_id: int) -> int:
+    async with async_session() as session:
+        result = await session.execute(
+            select(func.count(Order.id))
+            .where(Order.shop_id == shop_id)
+            .where(Order.status == "pending")
+        )
+        return result.scalar() or 0
+
+
+async def get_shop_notifications(shop_id: int) -> Dict[str, int]:
+    return {
+        "pending_orders": await count_pending_orders_for_shop(shop_id),
+        "unread_messages": await count_unread_shop_messages(shop_id),
+    }
+
+
+async def mark_shop_owner_messages_read(shop_id: int) -> bool:
+    try:
+        async with async_session() as session:
+            await session.execute(
+                update(VendorAdminMessage)
+                .where(VendorAdminMessage.shop_id == shop_id)
+                .where(VendorAdminMessage.is_from_vendor == 0)
+                .values(is_read=1)
+            )
+            await session.commit()
+        return True
+    except Exception:
+        return False
+
+
 async def count_unread_vendor_messages() -> int:
     async with async_session() as session:
         result = await session.execute(

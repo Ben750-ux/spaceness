@@ -930,6 +930,19 @@ async def vendor_update_shop(owner_user_id: int, req: VendorShopUpdateRequest):
     return {"ok": ok, "message": msg}
 
 
+@app.get("/api/vendor/notifications")
+async def vendor_notifications(shop_id: int):
+    return {"ok": True, **await db.get_shop_notifications(shop_id)}
+
+
+@app.post("/api/vendor/messages/read")
+async def vendor_messages_read(shop_id: int):
+    ok = await db.mark_shop_owner_messages_read(shop_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Erreur")
+    return {"ok": True}
+
+
 @app.get("/api/vendor/products")
 async def vendor_get_products(shop_id: int):
     products = await db.list_shop_products(shop_id)
