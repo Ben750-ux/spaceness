@@ -1334,11 +1334,24 @@ async def get_vendor_messages(shop_id: int) -> List[Dict[str, Any]]:
 async def reply_vendor_message(message_id: int, reply: str) -> bool:
     try:
         async with async_session() as session:
+            msg = (await session.execute(
+                select(VendorAdminMessage).where(VendorAdminMessage.id == message_id)
+            )).scalar_one_or_none()
+            if not msg:
+                return False
             await session.execute(
                 update(VendorAdminMessage)
                 .where(VendorAdminMessage.id == message_id)
-                .values(admin_reply=reply, replied_at=_now(), is_read=0)
+                .values(is_read=1, replied_at=_now())
             )
+            session.add(VendorAdminMessage(
+                shop_id=msg.shop_id,
+                vendor_user_id=msg.vendor_user_id,
+                subject="Réponse : " + msg.subject if not msg.subject.startswith("Réponse") else msg.subject,
+                message=reply,
+                is_from_vendor=0,
+                is_read=0,
+            ))
             await session.commit()
         return True
     except Exception:
