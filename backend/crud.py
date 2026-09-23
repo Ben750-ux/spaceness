@@ -1188,7 +1188,9 @@ async def count_pending_orders_for_shop(shop_id: int) -> int:
     async with async_session() as session:
         result = await session.execute(
             select(func.count(Order.id))
-            .where(Order.shop_id == shop_id)
+            .select_from(Order)
+            .join(Product, Order.product_id == Product.id)
+            .where(Product.shop_id == shop_id)
             .where(Order.status == "pending")
         )
         return result.scalar() or 0
