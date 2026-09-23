@@ -932,7 +932,10 @@ async def vendor_update_shop(owner_user_id: int, req: VendorShopUpdateRequest):
 
 @app.get("/api/vendor/notifications")
 async def vendor_notifications(shop_id: int):
-    return {"ok": True, **await db.get_shop_notifications(shop_id)}
+    try:
+        return {"ok": True, **await db.get_shop_notifications(shop_id)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"vendor notifications: {e}")
 
 
 @app.post("/api/vendor/messages/read")
