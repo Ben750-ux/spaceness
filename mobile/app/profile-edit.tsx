@@ -15,7 +15,7 @@ const GENDERS = ['homme', 'femme', 'autre'] as const;
 
 export default function ProfileEditScreen() {
   const router = useRouter();
-  const { user: contextUser } = useAuth();
+  const { user: contextUser, updateUser } = useAuth();
   const [user, setUser] = useState<User | null>(contextUser);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -69,6 +69,7 @@ export default function ProfileEditScreen() {
     });
     setSaving(false);
     if (res.ok) {
+      if (res.user) updateUser(res.user);
       setSuccess(res.message || 'Profil mis à jour.');
       setTimeout(() => router.back(), 900);
     } else {
