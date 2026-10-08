@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     email_user: str = ""
     email_password: str = ""
 
+    resend_api_key: str = ""
+    resend_from: str = "Spaceness <onboarding@resend.dev>"
+
     admin_email: str = "admin@shop.local"
     admin_password: str = "admin123"
 

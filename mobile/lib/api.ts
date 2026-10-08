@@ -125,21 +125,21 @@ export async function verifyEmailCode(userId: number, code: string) {
   }
 }
 
-export async function resendVerificationCode(userId: number): Promise<string | null> {
+export async function resendVerificationCode(userId: number): Promise<boolean> {
   try {
-    const res = await request<{ ok: boolean; code?: string }>('POST', '/api/auth/resend-code', { user_id: userId });
-    return res.ok && res.code ? res.code : null;
+    const res = await request<{ ok: boolean }>('POST', '/api/auth/resend-code', { user_id: userId });
+    return res.ok;
   } catch {
-    return null;
+    return false;
   }
 }
 
 export async function forgotPassword(email: string) {
   try {
-    const res = await request<{ ok: boolean; code?: string }>('POST', '/api/auth/forgot-password', { email });
-    return { ok: res.ok, code: res.code };
+    const res = await request<{ ok: boolean }>('POST', '/api/auth/forgot-password', { email });
+    return { ok: res.ok };
   } catch (e) {
-    return { ok: false, code: undefined, message: (e as Error).message };
+    return { ok: false, message: (e as Error).message };
   }
 }
 

@@ -22,7 +22,7 @@ export default function ForgotScreen() {
     const res = await api.forgotPassword(email.trim());
     setLoading(false);
     if (res.ok) {
-      router.push({ pathname: '/reset', params: { email: email.trim(), code: res.code || '' } });
+      router.push({ pathname: '/reset', params: { email: email.trim() } });
     } else {
       setError(res.message || 'Erreur. Vérifiez votre email.');
     }

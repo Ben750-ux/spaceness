@@ -10,9 +10,9 @@ import { Colors } from '@/constants/theme';
 import * as api from '@/lib/api';
 
 export default function ResetScreen() {
-  const params = useLocalSearchParams<{ email?: string; code?: string }>();
+  const params = useLocalSearchParams<{ email?: string }>();
   const router = useRouter();
-  const [code, setCode] = useState(params.code || '');
+  const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
@@ -50,6 +50,9 @@ export default function ResetScreen() {
             </View>
           ) : (
             <>
+              {params.email ? (
+                <Text style={styles.hint}>Un code à 6 chiffres a été envoyé à {params.email}. Vérifiez vos spams.</Text>
+              ) : null}
               <TextField label="Code de réinitialisation" icon="keypad-outline" placeholder="••••••" keyboardType="number-pad" maxLength={6} value={code} onChangeText={setCode} />
               <TextField label="Nouveau mot de passe" icon="lock-closed-outline" placeholder="Au moins 6 caractères" secureTextEntry value={password} onChangeText={setPassword} />
               <TextField label="Confirmer" icon="lock-closed-outline" placeholder="••••••••" secureTextEntry value={confirm} onChangeText={setConfirm} />
@@ -69,6 +72,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   flex: { flex: 1 },
   content: { padding: 24 },
+  hint: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', marginBottom: 16, lineHeight: 19 },
   error: { color: Colors.danger, fontSize: 13, marginBottom: 12, textAlign: 'center' },
   successBox: { alignItems: 'center', marginTop: 60 },
   successTitle: { fontSize: 22, fontWeight: '800', color: Colors.text, marginTop: 16 },

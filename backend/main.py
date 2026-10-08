@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import hmac
 import json
+import logging
 import os
 import time
 import uuid
@@ -21,11 +22,36 @@ from typing import List, Optional
 
 from config import settings
 import crud as db
+import mailer
 from models import init_db
 
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}
+
+logger = logging.getLogger("uvicorn")
+
+# Rate limit en memoire : cle -> timestamps des appels recents
+_rate_hits: dict = {}
+
+
+def _rate_limited(key: str, max_calls: int, window_sec: int) -> bool:
+    now = time.time()
+    hits = [t for t in _rate_hits.get(key, []) if now - t < window_sec]
+    if len(hits) >= max_calls:
+        _rate_hits[key] = hits
+        return True
+    hits.append(now)
+    _rate_hits[key] = hits
+    if len(_rate_hits) > 10000:
+        for k in list(_rate_hits):
+            if not [t for t in _rate_hits[k] if now - t < window_sec]:
+                del _rate_hits[k]
+    return False
+
+
+def _client_ip(request: FastRequest) -> str:
+    return request.client.host if request.client else "unknown"
 
 
 # Keep-alive : evite l'endormissement du service (Render free tier = 15 min d'inactivite)
@@ -108,11 +134,6 @@ class ResendCodeRequest(BaseModel):
 
 class UserIdRequest(BaseModel):
     user_id: int
-
-
-class SaveCodeRequest(BaseModel):
-    user_id: int
-    code: str
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -328,18 +349,19 @@ async def verify_code(req: VerifyCodeRequest):
 
 
 @app.post("/api/auth/resend-code")
-async def resend_code(req: ResendCodeRequest):
+async def resend_code(req: ResendCodeRequest, request: FastRequest):
+    ip = _client_ip(request)
+    if _rate_limited(f"resend:{req.user_id}", 3, 600) or _rate_limited(f"resend-ip:{ip}", 10, 600):
+        raise HTTPException(status_code=429, detail="Trop de demandes. Réessayez dans quelques minutes.")
     user = await db.get_user_by_id(req.user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="Utilisateur introuvable")
+        return {"ok": True}
     code = db._generate_verification_code()
     await db.save_verification_code(req.user_id, code)
-    return {"ok": True, "code": code, "email": user["email"]}
-
-
-@app.post("/api/auth/save-code")
-async def save_code(req: SaveCodeRequest):
-    await db.save_verification_code(req.user_id, req.code)
+    try:
+        await mailer.send_verification_code(user["email"], code)
+    except Exception:
+        logger.exception("Envoi email verification impossible pour user %s", req.user_id)
     return {"ok": True}
 
 
@@ -364,11 +386,18 @@ async def update_user(req: UpdateProfileRequest):
 
 # ============ MOT DE PASSE OUBLIE ============
 @app.post("/api/auth/forgot-password")
-async def forgot_password(req: ForgotPasswordRequest):
-    ok, code = await db.forgot_password(req.email)
-    if not ok:
-        raise HTTPException(status_code=404, detail=code)
-    return {"ok": True, "code": code}
+async def forgot_password(req: ForgotPasswordRequest, request: FastRequest):
+    email = req.email.strip().lower()
+    ip = _client_ip(request)
+    if _rate_limited(f"forgot:{email}", 3, 600) or _rate_limited(f"forgot-ip:{ip}", 10, 600):
+        raise HTTPException(status_code=429, detail="Trop de demandes. Réessayez dans quelques minutes.")
+    ok, code = await db.forgot_password(email)
+    if ok:
+        try:
+            await mailer.send_reset_code(email, code)
+        except Exception:
+            logger.exception("Envoi email reset impossible pour %s", email)
+    return {"ok": True, "message": "Si un compte existe avec cet email, un code a été envoyé."}
 
 @app.post("/api/auth/reset-password")
 async def reset_password(req: ResetPasswordRequest):
