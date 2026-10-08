@@ -125,12 +125,12 @@ export async function verifyEmailCode(userId: number, code: string) {
   }
 }
 
-export async function resendVerificationCode(userId: number): Promise<boolean> {
+export async function resendVerificationCode(userId: number): Promise<{ ok: boolean; code?: string }> {
   try {
-    const res = await request<{ ok: boolean }>('POST', '/api/auth/resend-code', { user_id: userId });
-    return res.ok;
+    const res = await request<{ ok: boolean; code?: string }>('POST', '/api/auth/resend-code', { user_id: userId });
+    return { ok: res.ok, code: res.code };
   } catch {
-    return false;
+    return { ok: false };
   }
 }
 

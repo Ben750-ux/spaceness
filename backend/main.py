@@ -351,13 +351,19 @@ async def verify_code(req: VerifyCodeRequest):
 @app.post("/api/auth/resend-code")
 async def resend_code(req: ResendCodeRequest, request: FastRequest):
     ip = _client_ip(request)
-    if _rate_limited(f"resend:{req.user_id}", 3, 600) or _rate_limited(f"resend-ip:{ip}", 10, 600):
+    # Rate limit seulement quand les emails sont reelslement envoyes
+    if settings.resend_api_key and (
+        _rate_limited(f"resend:{req.user_id}", 3, 600) or _rate_limited(f"resend-ip:{ip}", 10, 600)
+    ):
         raise HTTPException(status_code=429, detail="Trop de demandes. Réessayez dans quelques minutes.")
     user = await db.get_user_by_id(req.user_id)
     if not user:
         return {"ok": True}
     code = db._generate_verification_code()
     await db.save_verification_code(req.user_id, code)
+    if not settings.resend_api_key:
+        # Mode test : Resend non configure, le code est renvoye a l'app
+        return {"ok": True, "code": code}
     try:
         await mailer.send_verification_code(user["email"], code)
     except Exception:

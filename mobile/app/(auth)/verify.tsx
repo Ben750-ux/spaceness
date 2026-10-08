@@ -17,6 +17,7 @@ export default function VerifyScreen() {
   const userId = Number(params.userId) || user?.id;
 
   const [code, setCode] = useState('');
+  const [debugCode, setDebugCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -31,11 +32,17 @@ export default function VerifyScreen() {
     if (!userId) return;
     setMessage('');
     setError('');
-    const sent = await api.resendVerificationCode(userId);
-    if (sent) {
-      setMessage('Un code a été envoyé à votre adresse email.');
-    } else {
+    setDebugCode('');
+    const res = await api.resendVerificationCode(userId);
+    if (!res.ok) {
       setError('Envoi impossible. Réessayez plus tard.');
+      return;
+    }
+    if (res.code) {
+      setDebugCode(res.code);
+      setMessage('Code de test (l\'envoi par email sera active dans une prochaine mise a jour).');
+    } else {
+      setMessage('Un code a été envoyé à votre adresse email.');
     }
   };
 
@@ -70,7 +77,14 @@ export default function VerifyScreen() {
             <Ionicons name="shield-checkmark-outline" size={44} color={Colors.primary} />
           </View>
           <Text style={styles.title}>Vérifiez votre email</Text>
-          <Text style={styles.subtitle}>Saisissez le code à 6 chiffres envoyé par email.</Text>
+          <Text style={styles.subtitle}>Saisissez le code à 6 chiffres.</Text>
+
+          {debugCode ? (
+            <View style={styles.debugBox}>
+              <Text style={styles.debugLabel}>Code de test :</Text>
+              <Text style={styles.debugCode}>{debugCode}</Text>
+            </View>
+          ) : null}
 
           <TextField
             label="Code"
@@ -110,6 +124,9 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 22, fontWeight: '800', color: Colors.text, textAlign: 'center' },
   subtitle: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', marginTop: 8, marginBottom: 24 },
+  debugBox: { backgroundColor: Colors.surfaceMuted, borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 20 },
+  debugLabel: { fontSize: 12, color: Colors.textSecondary },
+  debugCode: { fontSize: 26, fontWeight: '800', color: Colors.primary, letterSpacing: 6, marginTop: 4 },
   error: { color: Colors.danger, fontSize: 13, marginBottom: 12, textAlign: 'center' },
   success: { color: Colors.secondary, fontSize: 13, marginBottom: 12, textAlign: 'center' },
 });
