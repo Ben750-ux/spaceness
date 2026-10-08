@@ -128,26 +128,39 @@ export default function ShopDetailScreen() {
   const renderHeader = () => (
     <View style={styles.headerContent}>
       <View style={styles.bannerWrap}>
-        <Image
-          source={{ uri: api.safeImage(shop.banner_url) || undefined }}
-          style={styles.banner}
-          contentFit="cover"
-          transition={200}
-        />
-        <View style={styles.logoWrap}>
+        {api.safeImage(shop.banner_url) ? (
           <Image
-            source={{ uri: api.safeImage(shop.logo_url) || undefined }}
-            style={styles.logo}
+            source={{ uri: api.safeImage(shop.banner_url) }}
+            style={styles.banner}
             contentFit="cover"
             transition={200}
           />
+        ) : (
+          <View style={[styles.banner, styles.bannerEmpty]}>
+            <Ionicons name="image-outline" size={44} color={Colors.textSecondary} />
+            <Text style={styles.bannerEmptyText}>Ajouter une photo de fond</Text>
+          </View>
+        )}
+        <View style={styles.logoWrap}>
+          {api.safeImage(shop.logo_url) ? (
+            <Image
+              source={{ uri: api.safeImage(shop.logo_url) }}
+              style={styles.logo}
+              contentFit="cover"
+              transition={200}
+            />
+          ) : (
+            <View style={[styles.logo, styles.logoEmpty]}>
+              <Ionicons name="storefront-outline" size={32} color={Colors.primary} />
+            </View>
+          )}
         </View>
       </View>
 
       <View style={styles.infoSection}>
         <Text style={styles.shopName}>{shop.shop_name}</Text>
         {shop.description ? (
-          <Text style={styles.shopDesc} numberOfLines={2}>{shop.description}</Text>
+          <Text style={styles.shopDesc}>{shop.description}</Text>
         ) : null}
 
         {shop.contact_info ? (
@@ -273,6 +286,16 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  bannerEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  bannerEmptyText: {
+    color: Colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
   logoWrap: {
     width: 76,
     height: 76,
@@ -292,6 +315,12 @@ const styles = StyleSheet.create({
   logo: {
     width: '100%',
     height: '100%',
+  },
+  logoEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surface,
+    paddingTop: 0,
   },
   infoSection: {
     paddingHorizontal: Spacing.lg,

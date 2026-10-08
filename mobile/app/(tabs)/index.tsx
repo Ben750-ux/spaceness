@@ -154,13 +154,16 @@ export default function MarketScreen() {
                   renderItem={({ item }) => (
                     <Pressable onPress={() => router.push(`/shop/${item.id}`)} style={styles.shopCard}>
                       {item.logo_url ? (
-                        <Image source={{ uri: item.logo_url }} style={styles.shopLogo} contentFit="cover" />
+                        <Image source={{ uri: api.safeImage(item.logo_url) }} style={styles.shopLogo} contentFit="cover" />
                       ) : (
                         <View style={styles.shopLogoPlaceholder}>
                           <Ionicons name="storefront-outline" size={26} color={Colors.primary} />
                         </View>
                       )}
                       <Text style={styles.shopName} numberOfLines={1}>{item.shop_name}</Text>
+                      {item.description ? (
+                        <Text style={styles.shopDesc} numberOfLines={2}>{item.description}</Text>
+                      ) : null}
                       <Text style={styles.shopCount}>{item.product_count ?? 0} produit(s)</Text>
                     </Pressable>
                   )}
@@ -249,11 +252,12 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
   sectionMore: { fontSize: 13, fontWeight: '700', color: Colors.primary },
   shopRow: { gap: 12, paddingBottom: 6 },
-  shopCard: { width: 132, backgroundColor: Colors.surface, borderRadius: Radius.md, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: Colors.border },
+  shopCard: { width: 150, backgroundColor: Colors.surface, borderRadius: Radius.md, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: Colors.border },
   shopLogo: { width: 64, height: 64, borderRadius: 32, marginBottom: 8, backgroundColor: Colors.surfaceMuted },
   shopLogoPlaceholder: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.surfaceMuted, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   shopName: { fontSize: 13, fontWeight: '700', color: Colors.text, textAlign: 'center' },
-  shopCount: { fontSize: 11, color: Colors.textLight, marginTop: 2 },
+  shopDesc: { fontSize: 11, color: Colors.textSecondary, textAlign: 'center', marginTop: 4, lineHeight: 14 },
+  shopCount: { fontSize: 11, color: Colors.textLight, marginTop: 4 },
   empty: { alignItems: 'center', paddingVertical: 60, gap: 12 },
   emptyText: { color: Colors.textSecondary, fontSize: 15 },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
