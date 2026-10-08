@@ -50,6 +50,8 @@ export default function OrdersScreen() {
   useFocusEffect(
     useCallback(() => {
       loadOrders();
+      const iv = setInterval(loadOrders, 15000);
+      return () => clearInterval(iv);
     }, [loadOrders]),
   );
 

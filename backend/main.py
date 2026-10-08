@@ -978,10 +978,17 @@ async def vendor_get_orders(shop_id: int):
     return {"ok": True, "orders": orders}
 
 
+ORDER_STATUSES = {"pending", "confirmed", "shipped", "delivered", "cancelled"}
+
+
 @app.put("/api/vendor/orders/{order_id}/status")
 async def vendor_update_order_status(order_id: int, shop_id: int, req: VendorOrderStatusRequest):
+    if req.status not in ORDER_STATUSES:
+        raise HTTPException(status_code=400, detail="Statut invalide")
     ok = await db.update_order_status_if_shop(order_id, shop_id, req.status)
-    return {"ok": ok}
+    if not ok:
+        raise HTTPException(status_code=404, detail="Commande introuvable")
+    return {"ok": True}
 
 
 @app.get("/api/vendor/messages")
